@@ -47,3 +47,17 @@ Thumbs.db
 
 ### Docker ###
 docker-compose.override.yml
+
+### Claude / AI tooling ###
+.agents/
+.claude/
+.claude-flow/
+skills-lock.json
+ALIGN_TOKENS_PROMPT.md
+IMPROVEMENT_PLAN.md
+SYSTEM_ANALYSIS.md
+
+### Local ###
+local.properties
+qodana.yaml
+.github/workflows/qodana_code_quality.yml
