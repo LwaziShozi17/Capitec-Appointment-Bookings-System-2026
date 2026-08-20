@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  /* Inferred fallback palette — real values live in @capitecbankltd/paragon_mfe_shared, see ALIGN_TOKENS_PROMPT.md */
+
+  /* Brand navy/blue */
+  --color-primary: #2F70EF;
+  --color-primary-dark: #001E68;
+  --color-primary-light: #6B99FA;
+  --color-primary-container: #BACEFF;
+  --color-secondary: #00486D;
+
+  /* Surfaces */
+  --color-surface: #FFFFFF;
+  --color-surface-background: #F0F3FA;
+  --color-surface-dim: #E3E8F2;
+  --color-outline: #C4CEE1;
+
+  /* Text */
+  --color-text-high: #001E68;
+  --color-text-medium: #4E6066;
+  --color-text-low: #A6B6D1;
+
+  /* Semantic */
+  --color-error: #E61414;
+  --color-error-dark: #B30F0F;
+  --color-success: #009243;
+  --color-success-dark: #006B31;
+  --color-warning: #FC8628;
+  --color-info: #009DE0;
+  --color-disabled: #A6B6D1;
+}

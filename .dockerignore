@@ -1,0 +1,12 @@
+.git
+.github
+.gradle
+build
+.env
+*.md
+frontend
+node_modules
+.vite
+.claude
+.agents
+.claude-flow
