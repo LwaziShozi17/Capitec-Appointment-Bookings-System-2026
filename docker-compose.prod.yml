@@ -1,0 +1,65 @@
+# Production overlay — merge with base docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Required environment variables (injected by CI deploy step):
+#   BACKEND_IMAGE, FRONTEND_IMAGE, IMAGE_TAG
+#   POSTGRES_USER, POSTGRES_PASSWORD, JWT_SECRET, CORS_ALLOWED_ORIGINS
+
+services:
+  postgres:
+    restart: always
+    environment:
+      POSTGRES_DB: capitec_booking
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # Expose port only on the loopback interface for production security
+    ports:
+      - "127.0.0.1:5432:5432"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '1.0'
+
+  backend:
+    image: ${BACKEND_IMAGE}:${IMAGE_TAG}
+    build: null  # disable source build; use pre-built image from GHCR
+    restart: always
+    ports:
+      - "127.0.0.1:8080:8080"  # bind to loopback; expose externally via nginx/load-balancer
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/capitec_booking
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      # JAVA_TOOL_OPTIONS is read directly by the JVM — no entrypoint changes needed
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: '1.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+  frontend:
+    image: ${FRONTEND_IMAGE}:${IMAGE_TAG}
+    build: null
+    restart: always
+    ports:
+      - "0.0.0.0:80:80"
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"

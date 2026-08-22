@@ -1,0 +1,93 @@
+name: Manual Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options: [production, staging]
+      rollback_tag:
+        description: 'Image tag to roll back to (e.g. sha-abc1234...). Leave blank to use the previous known-good tag stored on the server.'
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  rollback:
+    name: Rollback ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ inputs.environment == 'production' && vars.PRODUCTION_URL || vars.STAGING_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Execute rollback via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          TARGET_TAG: ${{ inputs.rollback_tag }}
+          POSTGRES_USER: ${{ inputs.environment == 'production' && secrets.PROD_DB_USER || secrets.STAGING_DB_USER }}
+          POSTGRES_PASSWORD: ${{ inputs.environment == 'production' && secrets.PROD_DB_PASSWORD || secrets.STAGING_DB_PASSWORD }}
+          JWT_SECRET: ${{ inputs.environment == 'production' && secrets.PROD_JWT_SECRET || secrets.STAGING_JWT_SECRET }}
+          CORS_ALLOWED_ORIGINS: ${{ inputs.environment == 'production' && vars.PROD_CORS_ORIGINS || vars.STAGING_CORS_ORIGINS }}
+        with:
+          host: ${{ inputs.environment == 'production' && secrets.PROD_HOST || secrets.STAGING_HOST }}
+          username: ${{ inputs.environment == 'production' && secrets.PROD_USER || secrets.STAGING_USER }}
+          key: ${{ inputs.environment == 'production' && secrets.PROD_SSH_KEY || secrets.STAGING_SSH_KEY }}
+          envs: TARGET_TAG,POSTGRES_USER,POSTGRES_PASSWORD,JWT_SECRET,CORS_ALLOWED_ORIGINS
+          script: |
+            set -euo pipefail
+            cd /opt/capitec-booking
+
+            # Resolve the tag to deploy
+            if [ -n "${TARGET_TAG}" ]; then
+              ROLLBACK_TO="${TARGET_TAG}"
+              echo "Rolling back to explicitly requested tag: ${ROLLBACK_TO}"
+            elif [ -f .previous-tag ]; then
+              ROLLBACK_TO=$(cat .previous-tag)
+              echo "Rolling back to previous known-good tag: ${ROLLBACK_TO}"
+            else
+              echo "ERROR: No target tag provided and no .previous-tag file found on server."
+              exit 1
+            fi
+
+            REGISTRY="${{ env.REGISTRY }}"
+            OWNER="${{ github.repository_owner }}"
+            BACKEND_IMAGE="${REGISTRY}/${OWNER}/capitec-booking-backend"
+            FRONTEND_IMAGE="${REGISTRY}/${OWNER}/capitec-booking-frontend"
+
+            ENV="${{ inputs.environment }}"
+            COMPOSE_OVERRIDE="docker-compose.${ENV}.yml"
+
+            echo "Pre-pulling rollback images..."
+            docker pull "${BACKEND_IMAGE}:${ROLLBACK_TO}"
+            docker pull "${FRONTEND_IMAGE}:${ROLLBACK_TO}"
+
+            # Save current tag in case we need to re-roll forward
+            [ -f .deployed-tag ] && cp .deployed-tag .previous-tag || true
+            echo "${ROLLBACK_TO}" > .deployed-tag
+
+            IMAGE_TAG="${ROLLBACK_TO}" \
+            BACKEND_IMAGE="${BACKEND_IMAGE}" \
+            FRONTEND_IMAGE="${FRONTEND_IMAGE}" \
+            docker compose -f docker-compose.yml -f "${COMPOSE_OVERRIDE}" \
+              up -d --no-build --remove-orphans
+
+            echo "Waiting for backend to be healthy..."
+            timeout 180 bash -c \
+              'until docker compose ps backend 2>/dev/null | grep -q "(healthy)"; do
+                sleep 5
+                printf "."
+              done'
+            echo " Rollback successful. Running: ${ROLLBACK_TO}"
+
+      - name: Verify rollback with smoke test
+        run: bash scripts/smoke-test.sh
+        env:
+          BASE_URL: ${{ inputs.environment == 'production' && vars.PRODUCTION_URL || vars.STAGING_URL }}
+          SMOKE_TIMEOUT: 120

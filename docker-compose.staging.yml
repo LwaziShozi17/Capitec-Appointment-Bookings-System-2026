@@ -1,0 +1,51 @@
+# Staging overlay — merge with base docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+#
+# Required environment variables (set by CI or a .env file on the host):
+#   BACKEND_IMAGE, FRONTEND_IMAGE, IMAGE_TAG
+#   POSTGRES_USER, POSTGRES_PASSWORD, JWT_SECRET, CORS_ALLOWED_ORIGINS
+
+services:
+  postgres:
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: capitec_booking
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+  backend:
+    image: ${BACKEND_IMAGE}:${IMAGE_TAG}
+    build: null  # disable source build; use pre-built image from GHCR
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/capitec_booking
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.75'
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  frontend:
+    image: ${FRONTEND_IMAGE}:${IMAGE_TAG}
+    build: null
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"

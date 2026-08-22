@@ -1,17 +1,27 @@
-
-name: CI Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
     branches: [main, develop]
+    tags: ['v*.*.*']
   pull_request:
-    branches: [main]
+    branches: [main, develop]
+
+# Cancel in-progress runs for the same branch on new pushes (saves minutes).
+# PRs cancel each other; branch pushes to main/develop do not cancel deployments.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  REGISTRY: ghcr.io
 
 jobs:
-  backend-tests:
-    name: Backend Build & Test
-    runs-on: ubuntu-latest
+  # ─── Stage 1: Quality Gates (parallel) ─────────────────────────────────────
 
+  quality-backend:
+    name: Backend – Tests & Coverage
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -19,74 +29,324 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'temurin'
-          cache: 'gradle'
+          distribution: temurin
+          cache: gradle
 
-      - name: Grant execute permission for gradlew
+      - name: Grant execute permission
         run: chmod +x gradlew
 
-      - name: Run tests with coverage
-        run: ./gradlew test jacocoTestReport
+      - name: Run tests with JaCoCo coverage gate
+        run: ./gradlew test jacocoTestReport jacocoTestCoverageVerification --no-daemon
         env:
           SPRING_PROFILES_ACTIVE: test
-          JWT_SECRET: ci-test-secret-key-that-is-at-least-256-bits-long-for-hmac-sha
-
-      - name: Verify coverage threshold (80%)
-        run: ./gradlew jacocoTestCoverageVerification
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: backend-coverage-report
+          name: backend-coverage
           path: build/reports/jacoco/test/html/
+          retention-days: 14
 
-  frontend-tests:
-    name: Frontend Build & Test
+  quality-frontend:
+    name: Frontend – Lint, TypeScript & Tests
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run linting
+      - name: Lint
         run: npm run lint
 
-      - name: Build (TypeScript + Vite)
-        run: npm run build
+      - name: TypeScript check
+        run: npx tsc --noEmit
 
-      - name: Run tests with coverage
+      - name: Tests with coverage
         run: npm run test:coverage
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: frontend-coverage-report
+          name: frontend-coverage
           path: frontend/coverage/
+          retention-days: 14
 
-  build-docker:
-    name: Docker Build Verification
+  # ─── Stage 2: Build & Push Immutable Artifacts ─────────────────────────────
+  # Runs only on pushes (not PRs). Both quality gates must pass first.
+  # The same SHA-tagged image is later promoted staging → production.
+
+  build-and-push:
+    name: Build & Push Docker Images
     runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests]
+    needs: [quality-backend, quality-frontend]
+    if: github.event_name != 'pull_request'
+    outputs:
+      image-tag: sha-${{ github.sha }}
+
+    permissions:
+      contents: read
+      packages: write
+      id-token: write  # required for OIDC-based image signing (provenance/SBOM)
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build backend Docker image
-        run: docker build -t capitec-booking-backend .
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build frontend Docker image
-        run: docker build -t capitec-booking-frontend ./frontend
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute backend image tags
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/capitec-booking-backend
+          tags: |
+            type=sha,prefix=sha-,format=long
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build & push backend image
+        id: build-backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
+            APP_VERSION=${{ github.ref_name }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+          provenance: true
+          sbom: true
+
+      - name: Compute frontend image tags
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/capitec-booking-frontend
+          tags: |
+            type=sha,prefix=sha-,format=long
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build & push frontend image
+        id: build-frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+          provenance: true
+          sbom: true
+
+      - name: Trivy scan – backend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/capitec-booking-backend:sha-${{ github.sha }}
+          format: sarif
+          output: trivy-backend.sarif
+          exit-code: '0'
+        continue-on-error: true
+
+      - name: Upload Trivy SARIF to Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-backend.sarif
+        continue-on-error: true
+
+  # ─── Stage 3: Deploy to Staging ────────────────────────────────────────────
+  # Deploys the immutable SHA-tagged image built in Stage 2.
+  # Runs on both main and develop branches.
+
+  deploy-staging:
+    name: Deploy → Staging
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: |
+      github.event_name != 'pull_request' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    environment:
+      name: staging
+      url: ${{ vars.STAGING_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH (rolling update)
+        uses: appleboy/ssh-action@v1
+        env:
+          BACKEND_IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/capitec-booking-backend
+          FRONTEND_IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/capitec-booking-frontend
+          IMAGE_TAG: sha-${{ github.sha }}
+          POSTGRES_USER: ${{ secrets.STAGING_DB_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.STAGING_JWT_SECRET }}
+          CORS_ALLOWED_ORIGINS: ${{ vars.STAGING_CORS_ORIGINS }}
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          envs: BACKEND_IMAGE,FRONTEND_IMAGE,IMAGE_TAG,POSTGRES_USER,POSTGRES_PASSWORD,JWT_SECRET,CORS_ALLOWED_ORIGINS
+          script: |
+            set -euo pipefail
+            cd /opt/capitec-booking
+
+            # Pre-pull images while old containers still serve traffic
+            docker pull "${BACKEND_IMAGE}:${IMAGE_TAG}"
+            docker pull "${FRONTEND_IMAGE}:${IMAGE_TAG}"
+
+            # Store current tag for potential rollback
+            echo "${IMAGE_TAG}" > .deployed-tag
+
+            # Rolling update: Docker Compose restarts services with the new image
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml \
+              up -d --no-build --remove-orphans
+
+            # Block until backend reports healthy (max 120s)
+            echo "Waiting for backend health check..."
+            timeout 120 bash -c \
+              'until docker compose ps backend 2>/dev/null | grep -q "(healthy)"; do
+                sleep 5
+                printf "."
+              done'
+            echo " Backend is healthy."
+
+  smoke-test-staging:
+    name: Smoke Test → Staging
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        run: bash scripts/smoke-test.sh
+        env:
+          BASE_URL: ${{ vars.STAGING_URL }}
+          SMOKE_TIMEOUT: 60
+
+  # ─── Stage 4: Deploy to Production ─────────────────────────────────────────
+  # Promotes the same SHA-tagged image from staging.
+  # Configure a GitHub Environment named "production" with required reviewers
+  # to enforce a mandatory manual approval gate before this job runs.
+
+  deploy-production:
+    name: Deploy → Production
+    runs-on: ubuntu-latest
+    needs: smoke-test-staging
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH (rolling update)
+        id: deploy
+        uses: appleboy/ssh-action@v1
+        env:
+          BACKEND_IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/capitec-booking-backend
+          FRONTEND_IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/capitec-booking-frontend
+          IMAGE_TAG: sha-${{ github.sha }}
+          POSTGRES_USER: ${{ secrets.PROD_DB_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.PROD_JWT_SECRET }}
+          CORS_ALLOWED_ORIGINS: ${{ vars.PROD_CORS_ORIGINS }}
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          envs: BACKEND_IMAGE,FRONTEND_IMAGE,IMAGE_TAG,POSTGRES_USER,POSTGRES_PASSWORD,JWT_SECRET,CORS_ALLOWED_ORIGINS
+          script: |
+            set -euo pipefail
+            cd /opt/capitec-booking
+
+            # Pre-pull — fail fast before disrupting the running service
+            docker pull "${BACKEND_IMAGE}:${IMAGE_TAG}"
+            docker pull "${FRONTEND_IMAGE}:${IMAGE_TAG}"
+
+            # Persist previous tag to enable auto-rollback below
+            [ -f .deployed-tag ] && cp .deployed-tag .previous-tag || true
+            echo "${IMAGE_TAG}" > .deployed-tag
+
+            # Rolling update
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              up -d --no-build --remove-orphans
+
+            echo "Waiting for backend health check..."
+            timeout 180 bash -c \
+              'until docker compose ps backend 2>/dev/null | grep -q "(healthy)"; do
+                sleep 5
+                printf "."
+              done'
+            echo " Production backend is healthy."
+
+      - name: Post-deploy smoke test
+        run: bash scripts/smoke-test.sh
+        env:
+          BASE_URL: ${{ vars.PRODUCTION_URL }}
+          SMOKE_TIMEOUT: 120
+
+      # Automatic rollback fires if the deploy step OR smoke test fails.
+      - name: Auto-rollback on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1
+        env:
+          POSTGRES_USER: ${{ secrets.PROD_DB_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.PROD_JWT_SECRET }}
+          CORS_ALLOWED_ORIGINS: ${{ vars.PROD_CORS_ORIGINS }}
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          envs: POSTGRES_USER,POSTGRES_PASSWORD,JWT_SECRET,CORS_ALLOWED_ORIGINS
+          script: |
+            set -euo pipefail
+            cd /opt/capitec-booking
+            if [ ! -f .previous-tag ]; then
+              echo "ERROR: No previous tag found — cannot auto-rollback."
+              exit 1
+            fi
+            PREV_TAG=$(cat .previous-tag)
+            REGISTRY="${{ env.REGISTRY }}"
+            OWNER="${{ github.repository_owner }}"
+            BACKEND_IMAGE="${REGISTRY}/${OWNER}/capitec-booking-backend"
+            FRONTEND_IMAGE="${REGISTRY}/${OWNER}/capitec-booking-frontend"
+            echo "Rolling back to ${PREV_TAG}..."
+            IMAGE_TAG="${PREV_TAG}" \
+            BACKEND_IMAGE="${BACKEND_IMAGE}" \
+            FRONTEND_IMAGE="${FRONTEND_IMAGE}" \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              up -d --no-build --remove-orphans
+            echo "Rollback complete. Now running ${PREV_TAG}."
+            cp .previous-tag .deployed-tag
