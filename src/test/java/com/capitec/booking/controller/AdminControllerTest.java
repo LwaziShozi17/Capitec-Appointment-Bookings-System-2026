@@ -44,7 +44,8 @@ class AdminControllerTest {
         apt.setId(id);
         apt.setUserId("user@test.com");
         apt.setCustomerName("Lwazi Shozi");
-        apt.setCustomerEmail("lwaziShozi@test.com");
+        apt.setCustomerEmail("lwaziShozi" +
+                "@test.com");
         apt.setCustomerPhone("082123");
         apt.setStatus(status);
         apt.setReferenceNumber("REF-" + id);
