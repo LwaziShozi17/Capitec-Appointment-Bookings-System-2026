@@ -1,7 +1,7 @@
 ARG GIT_COMMIT=unknown
 ARG APP_VERSION=local
 
-FROM eclipse-temurin:17-jdk-alpine AS build
+FROM eclipse-temurin:17-jdk-jammy AS build
 WORKDIR /app
 COPY gradlew .
 COPY gradle gradle
@@ -12,14 +12,14 @@ COPY src src
 RUN --mount=type=cache,target=/root/.gradle \
     chmod +x gradlew && ./gradlew bootJar --no-daemon -x test
 
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:17-jre-jammy
 ARG GIT_COMMIT
 ARG APP_VERSION
 LABEL org.opencontainers.image.source="https://github.com/LwaziShozi17/Capitec-Appointment-Bookings-System-2026-2026" \
       org.opencontainers.image.revision="${GIT_COMMIT}" \
       org.opencontainers.image.version="${APP_VERSION}"
 WORKDIR /app
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 COPY --from=build /app/build/libs/*.jar app.jar
 RUN chown appuser:appgroup app.jar
 USER appuser
