@@ -2,6 +2,96 @@
 
 A full-stack appointment booking system that lets Capitec Bank customers schedule in-branch appointments online and allows staff admins to manage the full appointment lifecycle.
 
+---
+
+## Quick Start — Docker
+
+> The fastest way to run the full stack (PostgreSQL + Spring Boot backend + React frontend) is with Docker Compose. No Java or Node.js install required.
+
+### Step 1 — Clone and enter the project
+
+```bash
+git clone https://github.com/LwaziShozi17/Capitec-Appointment-Bookings-System-2026-2026.git
+cd Capitec-Appointment-Bookings-System-2026-2026
+```
+
+### Step 2 — Build and start all containers
+
+```bash
+docker compose up --build
+```
+
+Docker will build the backend image (multi-stage, JRE runtime), the frontend image (Node build → Nginx), and pull the PostgreSQL image, then wire them all together.
+
+### Step 3 — Open the app
+
+| Service | URL |
+|---|---|
+| **Frontend** | http://localhost |
+| **Backend API** | http://localhost:8080 |
+| **Swagger UI** | http://localhost:8080/swagger-ui.html |
+| **Health Check** | http://localhost:8080/actuator/health |
+
+### Stop and remove containers
+
+```bash
+docker compose down
+```
+
+To also delete the PostgreSQL data volume:
+
+```bash
+docker compose down -v
+```
+
+---
+
+### Build and run images individually (without Compose)
+
+If you need to build or run a single image in isolation:
+
+**Backend**
+
+```bash
+# Build
+docker build -t capitec-booking-backend:local .
+
+# Run (requires a running PostgreSQL instance)
+docker run -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/capitec_booking \
+  -e SPRING_DATASOURCE_USERNAME=capitec \
+  -e SPRING_DATASOURCE_PASSWORD=capitec123 \
+  -e JWT_SECRET=change-me-minimum-32-characters-long \
+  capitec-booking-backend:local
+```
+
+**Frontend**
+
+```bash
+# Build
+docker build -t capitec-booking-frontend:local ./frontend
+
+# Run (proxies /api requests to the backend)
+docker run -p 80:80 capitec-booking-frontend:local
+```
+
+---
+
+## Demo Login Credentials
+
+Two accounts are seeded automatically on first startup:
+
+| Role | Email | Password |
+|---|---|---|
+| **Admin** | `admin@capitec.co.za` | `Admin@123` |
+| **Customer** | `user@capitec.co.za` | `User@123` |
+
+- The **Admin** account has access to the `/admin` dashboard and all `PATCH /api/v1/admin/...` endpoints.
+- The **Customer** account can browse branches, book appointments, and view their booking history.
+
+---
+
 ## Architecture
 
 ```
