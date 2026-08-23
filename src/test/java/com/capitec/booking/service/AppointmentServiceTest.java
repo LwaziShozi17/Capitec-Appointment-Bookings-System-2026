@@ -20,6 +20,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -28,6 +33,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -209,12 +215,13 @@ class AppointmentServiceTest {
     void shouldGetUserAppointments() {
         Appointment appointment = new Appointment();
         appointment.setUserId("user-123");
-        when(appointmentRepository.findByUserId("user-123")).thenReturn(List.of(appointment));
+        Page<Appointment> page = new PageImpl<>(List.of(appointment));
+        when(appointmentRepository.findByUserId(eq("user-123"), any(Pageable.class))).thenReturn(page);
 
-        List<Appointment> results = appointmentService.getUserAppointments("user-123");
+        Page<Appointment> results = appointmentService.getUserAppointments("user-123", PageRequest.of(0, 20));
 
-        assertThat(results).hasSize(1);
-        assertThat(results.get(0).getUserId()).isEqualTo("user-123");
+        assertThat(results.getContent()).hasSize(1);
+        assertThat(results.getContent().get(0).getUserId()).isEqualTo("user-123");
     }
 
     @Test
@@ -305,22 +312,24 @@ class AppointmentServiceTest {
 
     @Test
     void shouldGetAllAppointments() {
-        when(appointmentRepository.findAll()).thenReturn(List.of(new Appointment(), new Appointment()));
+        Page<Appointment> page = new PageImpl<>(List.of(new Appointment(), new Appointment()));
+        when(appointmentRepository.findAll(any(Pageable.class))).thenReturn(page);
 
-        List<Appointment> results = appointmentService.getAllAppointments();
+        Page<Appointment> results = appointmentService.getAllAppointments(PageRequest.of(0, 20));
 
-        assertThat(results).hasSize(2);
+        assertThat(results.getContent()).hasSize(2);
     }
 
     @Test
     void shouldGetAppointmentsByStatus() {
         Appointment apt = new Appointment();
         apt.setStatus(AppointmentStatus.PENDING);
-        when(appointmentRepository.findByStatus(AppointmentStatus.PENDING)).thenReturn(List.of(apt));
+        Page<Appointment> page = new PageImpl<>(List.of(apt));
+        when(appointmentRepository.findByStatus(eq(AppointmentStatus.PENDING), any(Pageable.class))).thenReturn(page);
 
-        List<Appointment> results = appointmentService.getAppointmentsByStatus(AppointmentStatus.PENDING);
+        Page<Appointment> results = appointmentService.getAppointmentsByStatus(AppointmentStatus.PENDING, PageRequest.of(0, 20));
 
-        assertThat(results).hasSize(1);
+        assertThat(results.getContent()).hasSize(1);
     }
 
     @Test

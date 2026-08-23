@@ -12,6 +12,10 @@ import com.capitec.booking.service.AppointmentService;
 import com.capitec.booking.service.SlotGenerationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -20,6 +24,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -67,27 +72,30 @@ class AdminControllerTest {
 
     @Test
     void getAllAppointments_returnsAll() {
-        List<Appointment> appointments = List.of(
+        Page<Appointment> appointments = new PageImpl<>(List.of(
                 createAppointment(1L, AppointmentStatus.PENDING),
                 createAppointment(2L, AppointmentStatus.CONFIRMED)
-        );
-        when(appointmentService.getAllAppointments()).thenReturn(appointments);
+        ));
+        when(appointmentService.getAllAppointments(any(Pageable.class))).thenReturn(appointments);
 
-        ResponseEntity<List<AppointmentResponse>> response = controller.getAllAppointments(null);
+        ResponseEntity<Page<AppointmentResponse>> response =
+                controller.getAllAppointments(null, PageRequest.of(0, 20));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).hasSize(2);
+        assertThat(response.getBody().getContent()).hasSize(2);
     }
 
     @Test
     void getAllAppointments_filteredByStatus() {
-        List<Appointment> appointments = List.of(createAppointment(1L, AppointmentStatus.PENDING));
-        when(appointmentService.getAppointmentsByStatus(AppointmentStatus.PENDING)).thenReturn(appointments);
+        Page<Appointment> appointments = new PageImpl<>(List.of(createAppointment(1L, AppointmentStatus.PENDING)));
+        when(appointmentService.getAppointmentsByStatus(eq(AppointmentStatus.PENDING), any(Pageable.class)))
+                .thenReturn(appointments);
 
-        ResponseEntity<List<AppointmentResponse>> response = controller.getAllAppointments(AppointmentStatus.PENDING);
+        ResponseEntity<Page<AppointmentResponse>> response =
+                controller.getAllAppointments(AppointmentStatus.PENDING, PageRequest.of(0, 20));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody().getContent()).hasSize(1);
     }
 
     @Test

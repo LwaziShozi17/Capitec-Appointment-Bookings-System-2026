@@ -8,13 +8,16 @@ import com.capitec.booking.service.AppointmentService;
 import com.capitec.booking.service.SlotGenerationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -36,15 +39,16 @@ public class AdminController {
 
     @Operation(summary = "List all appointments", description = "Returns all appointments, optionally filtered by status")
     @GetMapping("/appointments")
-    public ResponseEntity<List<AppointmentResponse>> getAllAppointments(
-            @RequestParam(required = false) AppointmentStatus status) {
-        List<Appointment> appointments;
+    public ResponseEntity<Page<AppointmentResponse>> getAllAppointments(
+            @RequestParam(required = false) AppointmentStatus status,
+            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+        Page<Appointment> appointments;
         if (status != null) {
-            appointments = appointmentService.getAppointmentsByStatus(status);
+            appointments = appointmentService.getAppointmentsByStatus(status, pageable);
         } else {
-            appointments = appointmentService.getAllAppointments();
+            appointments = appointmentService.getAllAppointments(pageable);
         }
-        return ResponseEntity.ok(appointments.stream().map(mapper::toResponse).toList());
+        return ResponseEntity.ok(appointments.map(mapper::toResponse));
     }
 
     @Operation(summary = "Confirm appointment")

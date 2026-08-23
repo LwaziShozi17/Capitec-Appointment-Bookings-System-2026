@@ -14,10 +14,10 @@ import com.capitec.booking.repository.AppointmentSlotRepository;
 import com.capitec.booking.repository.ServiceTypeRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 public class AppointmentService {
@@ -68,8 +68,7 @@ public class AppointmentService {
         log.info("Appointment booked successfully id={} ref={}", saved.getId(), saved.getReferenceNumber());
         return saved;
     }
-// ADD ORDER. BUT THERE'S NO NEED COS THIS IS NOT A BIG SERVICE
-    //FROM HERE
+
     @Transactional
     public Appointment confirmAppointment(Long appointmentId) {
         Appointment appointment = getAppointment(appointmentId);
@@ -93,7 +92,7 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.COMPLETED);
         return appointmentRepository.save(appointment);
     }
-//TILL HERE
+
     @Transactional
     public Appointment cancelAppointment(Long appointmentId, String authenticatedUserId) {
         log.info("User {} requesting cancellation of appointment {}", authenticatedUserId, appointmentId);
@@ -147,18 +146,18 @@ public class AppointmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<Appointment> getUserAppointments(String userId) {
-        return appointmentRepository.findByUserId(userId);
+    public Page<Appointment> getUserAppointments(String userId, Pageable pageable) {
+        return appointmentRepository.findByUserId(userId, pageable);
     }
 
     @Transactional(readOnly = true)
-    public List<Appointment> getAllAppointments() {
-        return appointmentRepository.findAll();
+    public Page<Appointment> getAllAppointments(Pageable pageable) {
+        return appointmentRepository.findAll(pageable);
     }
 
     @Transactional(readOnly = true)
-    public List<Appointment> getAppointmentsByStatus(AppointmentStatus status) {
-        return appointmentRepository.findByStatus(status);
+    public Page<Appointment> getAppointmentsByStatus(AppointmentStatus status, Pageable pageable) {
+        return appointmentRepository.findByStatus(status, pageable);
     }
 
     private void validateStatusTransition(Appointment appointment, AppointmentStatus newStatus) {

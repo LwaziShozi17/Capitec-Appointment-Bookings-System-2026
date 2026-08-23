@@ -10,6 +10,10 @@ import com.capitec.booking.mapper.AppointmentMapper;
 import com.capitec.booking.service.AppointmentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -22,6 +26,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -92,10 +97,11 @@ class AppointmentControllerTest {
 
     @Test
     void shouldReturnUserAppointments() {
-        when(appointmentService.getUserAppointments("user@test.com"))
-                .thenReturn(List.of(sampleAppointment));
+        Page<Appointment> page = new PageImpl<>(List.of(sampleAppointment));
+        when(appointmentService.getUserAppointments(eq("user@test.com"), any(Pageable.class)))
+                .thenReturn(page);
 
-        ResponseEntity<?> response = controller.getMyAppointments(authentication);
+        ResponseEntity<?> response = controller.getMyAppointments(authentication, PageRequest.of(0, 20));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }

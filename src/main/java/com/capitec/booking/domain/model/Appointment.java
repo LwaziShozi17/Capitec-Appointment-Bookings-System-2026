@@ -15,17 +15,17 @@ public class Appointment {
     @Column(nullable = false)
     private String userId;
 
-    @OneToOne(fetch = FetchType.EAGER)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "slot_id", nullable = false)
     private AppointmentSlot slot;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_type_id", nullable = false)
     private ServiceType serviceType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private AppointmentStatus status = AppointmentStatus.CONFIRMED;
+    private AppointmentStatus status = AppointmentStatus.PENDING;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
