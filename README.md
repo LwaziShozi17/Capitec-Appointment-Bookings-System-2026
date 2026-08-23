@@ -50,8 +50,8 @@ In development the backend uses an **H2 in-memory database** — no PostgreSQL i
 | Vitest + Testing Library | 4.x |
 
 ### Infrastructure
-- Docker multi-stage builds (JRE-only runtime image, non-root user)
-- Docker Compose for local and production stacks
+- Docker multi-stage builds (JRE-only runtime image, non-root user, ARM64 + amd64)
+- Single Docker Compose file for local and CI/CD deployments
 - GitHub Actions CI/CD with staging + production environments
 - Nginx reverse proxy with SPA routing and API proxying
 
@@ -63,7 +63,7 @@ In development the backend uses an **H2 in-memory database** — no PostgreSQL i
 
 - **Java 17** — [Download](https://adoptium.net/)
 - **Node.js 20+** — [Download](https://nodejs.org/)
-- **Docker Desktop** *(only needed for the Docker option)* — [Download](https://www.docker.com/products/docker-desktop/)
+- **Docker Desktop or Rancher Desktop** *(only needed for the Docker option)* — [Docker Desktop](https://www.docker.com/products/docker-desktop/) / [Rancher Desktop](https://rancherdesktop.io/)
 
 ---
 
@@ -289,10 +289,8 @@ Interactive docs are available at `/swagger-ui.html`. Below is a quick reference
 ├── scripts/
 │   └── smoke-test.sh            # Post-deploy health check (frontend, /health, /api/v1/branches, SPA routing)
 │
-├── Dockerfile                   # Backend: JDK build stage → JRE runtime, non-root user
-├── docker-compose.yml           # Base stack: postgres + backend + frontend
-├── docker-compose.staging.yml   # Staging overrides
-├── docker-compose.prod.yml      # Production overrides
+├── Dockerfile                   # Backend: eclipse-temurin:17-jammy (amd64 + arm64), JDK build → JRE runtime, non-root user
+├── docker-compose.yml           # Full stack: postgres + backend + frontend (local and CI/CD)
 └── .env.example                 # Template of required environment variables
 ```
 

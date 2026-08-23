@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: capitec_booking
       POSTGRES_USER: ${POSTGRES_USER:-capitec}
@@ -10,13 +11,20 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U capitec -d capitec_booking"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-capitec} -d capitec_booking"]
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '1.0'
 
   backend:
     build: .
+    image: ${BACKEND_IMAGE:-capitec-booking-backend}:${IMAGE_TAG:-local}
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
@@ -25,16 +33,40 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-capitec}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-capitec123}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production-must-be-at-least-256-bits}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: '1.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "10"
 
   frontend:
     build: ./frontend
+    image: ${FRONTEND_IMAGE:-capitec-booking-frontend}:${IMAGE_TAG:-local}
+    restart: unless-stopped
     ports:
       - "80:80"
     depends_on:
       - backend
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
 
 volumes:
   postgres_data:

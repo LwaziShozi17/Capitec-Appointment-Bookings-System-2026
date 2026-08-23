@@ -61,9 +61,6 @@ jobs:
             BACKEND_IMAGE="${REGISTRY}/${OWNER}/capitec-booking-backend"
             FRONTEND_IMAGE="${REGISTRY}/${OWNER}/capitec-booking-frontend"
 
-            ENV="${{ inputs.environment }}"
-            COMPOSE_OVERRIDE="docker-compose.${ENV}.yml"
-
             echo "Pre-pulling rollback images..."
             docker pull "${BACKEND_IMAGE}:${ROLLBACK_TO}"
             docker pull "${FRONTEND_IMAGE}:${ROLLBACK_TO}"
@@ -75,8 +72,7 @@ jobs:
             IMAGE_TAG="${ROLLBACK_TO}" \
             BACKEND_IMAGE="${BACKEND_IMAGE}" \
             FRONTEND_IMAGE="${FRONTEND_IMAGE}" \
-            docker compose -f docker-compose.yml -f "${COMPOSE_OVERRIDE}" \
-              up -d --no-build --remove-orphans
+            docker compose up -d --no-build --remove-orphans
 
             echo "Waiting for backend to be healthy..."
             timeout 180 bash -c \

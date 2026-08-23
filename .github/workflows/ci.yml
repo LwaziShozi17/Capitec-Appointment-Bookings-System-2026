@@ -228,8 +228,7 @@ jobs:
             echo "${IMAGE_TAG}" > .deployed-tag
 
             # Rolling update: Docker Compose restarts services with the new image
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml \
-              up -d --no-build --remove-orphans
+            docker compose up -d --no-build --remove-orphans
 
             # Block until backend reports healthy (max 120s)
             echo "Waiting for backend health check..."
@@ -299,8 +298,7 @@ jobs:
             echo "${IMAGE_TAG}" > .deployed-tag
 
             # Rolling update
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-              up -d --no-build --remove-orphans
+            docker compose up -d --no-build --remove-orphans
 
             echo "Waiting for backend health check..."
             timeout 180 bash -c \
@@ -346,7 +344,6 @@ jobs:
             IMAGE_TAG="${PREV_TAG}" \
             BACKEND_IMAGE="${BACKEND_IMAGE}" \
             FRONTEND_IMAGE="${FRONTEND_IMAGE}" \
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-              up -d --no-build --remove-orphans
+            docker compose up -d --no-build --remove-orphans
             echo "Rollback complete. Now running ${PREV_TAG}."
             cp .previous-tag .deployed-tag
