@@ -1,8 +1,6 @@
 @import "tailwindcss";
 
 @theme {
-  /* Inferred fallback palette — real values live in @capitecbankltd/paragon_mfe_shared, see ALIGN_TOKENS_PROMPT.md */
-
   /* Brand navy/blue */
   --color-primary: #2F70EF;
   --color-primary-dark: #001E68;
