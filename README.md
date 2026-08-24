@@ -386,6 +386,65 @@ Interactive docs are available at `/swagger-ui.html`. Below is a quick reference
 
 ---
 
+## Configuration Files
+
+The backend ships with three layered config files under `src/main/resources/`.
+
+### `application.properties` — base config (always loaded)
+
+```properties
+spring.application.name=Capitec Appointment Booking System
+
+# Active profile — override to "prod" via env var or Docker Compose
+spring.profiles.active=dev
+```
+
+The default profile is `dev`. Docker Compose overrides it to `prod` via `SPRING_PROFILES_ACTIVE=prod`.
+
+---
+
+### `application-dev.yml` — local development profile
+
+Activated automatically when you run `./gradlew bootRun`. No PostgreSQL or Docker needed.
+
+| Setting | Value |
+|---|---|
+| Database | H2 in-memory (`jdbc:h2:mem:capitec_booking`) |
+| H2 Console | http://localhost:8080/h2-console |
+| H2 JDBC URL | `jdbc:h2:mem:capitec_booking` |
+| H2 Username | `sa` |
+| H2 Password | *(leave blank)* |
+| Schema management | `create-drop` — rebuilt on every restart |
+| Seed data | Loaded from `data.sql` on startup |
+| CORS origins | `http://localhost:5173` (Vite dev server) |
+| JWT secret | Falls back to a safe hardcoded dev key if `JWT_SECRET` is not set |
+| Log level | `DEBUG` for `com.capitec.booking` |
+
+---
+
+### `application-prod.yml` — Docker / production profile
+
+Activated when `SPRING_PROFILES_ACTIVE=prod` is set (Docker Compose does this automatically).  
+All sensitive values **must** be supplied as environment variables — there are no fallback defaults.
+
+| Environment Variable | Required | Description |
+|---|---|---|
+| `SPRING_DATASOURCE_URL` | Yes | PostgreSQL JDBC URL, e.g. `jdbc:postgresql://postgres:5432/capitec_booking` |
+| `SPRING_DATASOURCE_USERNAME` | Yes | PostgreSQL username (default in Compose: `capitec`) |
+| `SPRING_DATASOURCE_PASSWORD` | Yes | PostgreSQL password (default in Compose: `capitec123`) |
+| `JWT_SECRET` | Yes | HMAC signing key — minimum 32 characters |
+| `CORS_ALLOWED_ORIGINS` | Yes | Comma-separated allowed frontend origins, e.g. `https://booking.capitec.co.za` |
+| `PORT` | No | HTTP port (defaults to `8080`) |
+
+Other prod-profile behaviour:
+- Schema management is `validate` — Hibernate checks the schema matches entities but never changes it.
+- SQL seed (`data.sql`) is **disabled** — data is not re-seeded on restart.
+- H2 console is **disabled**.
+- Actuator exposes only the `/health` endpoint.
+- Log level is `INFO` for app code, `WARN` for Spring Security.
+
+---
+
 ## Environment Variables
 
 Copy `.env.example` to `.env` for Docker Compose. For local dev without Docker, the dev profile uses safe defaults.
