@@ -61,8 +61,8 @@ docker run -p 8080:8080 \
   -e SPRING_PROFILES_ACTIVE=prod \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/capitec_booking \
   -e SPRING_DATASOURCE_USERNAME=capitec \
-  -e SPRING_DATASOURCE_PASSWORD=capitec123 \
-  -e JWT_SECRET=change-me-minimum-32-characters-long \
+  -e SPRING_DATASOURCE_PASSWORD=your-db-password \
+  -e JWT_SECRET=your-jwt-secret-minimum-32-characters \
   capitec-booking-backend:local
 ```
 
@@ -80,12 +80,12 @@ docker run -p 80:80 capitec-booking-frontend:local
 
 ## Demo Login Credentials
 
-Two accounts are seeded automatically on first startup:
+Two accounts are seeded automatically on first startup. Passwords are defined in `src/main/resources/data.sql`.
 
-| Role | Email | Password |
-|---|---|---|
-| **Admin** | `admin@capitec.co.za` | `Admin@123` |
-| **Customer** | `user@capitec.co.za` | `User@123` |
+| Role | Email |
+|---|---|
+| **Admin** | `admin@capitec.co.za` |
+| **Customer** | `user@capitec.co.za` |
 
 - The **Admin** account has access to the `/admin` dashboard and all `PATCH /api/v1/admin/...` endpoints.
 - The **Customer** account can browse branches, book appointments, and view their booking history.
@@ -170,7 +170,7 @@ cp .env.example .env
 ```
 JWT_SECRET=your-very-long-and-secret-key-minimum-32-chars
 POSTGRES_USER=capitec
-POSTGRES_PASSWORD=capitec123
+POSTGRES_PASSWORD=your-db-password
 ```
 
 **Step 3 — Build and start all services:**
@@ -237,12 +237,12 @@ The Vite dev server proxies all `/api/v1` requests to the backend on port 8080.
 
 ## Demo Accounts
 
-Two accounts are seeded automatically when the app starts:
+Two accounts are seeded automatically when the app starts. Passwords are defined in `src/main/resources/data.sql`.
 
-| Role | Email | Password |
-|---|---|---|
-| Admin | `admin@capitec.co.za` | `Admin@123` |
-| Customer | `user@capitec.co.za` | `User@123` |
+| Role | Email |
+|---|---|
+| Admin | `admin@capitec.co.za` |
+| Customer | `user@capitec.co.za` |
 
 The admin account can access `/admin` in the UI and all `PATCH /api/v1/admin/...` endpoints.
 
@@ -417,7 +417,7 @@ Activated automatically when you run `./gradlew bootRun`. No PostgreSQL or Docke
 | Schema management | `create-drop` — rebuilt on every restart |
 | Seed data | Loaded from `data.sql` on startup |
 | CORS origins | `http://localhost:5173` (Vite dev server) |
-| JWT secret | Falls back to a safe hardcoded dev key if `JWT_SECRET` is not set |
+| JWT secret | Read from `JWT_SECRET` env var — must be set before starting |
 | Log level | `DEBUG` for `com.capitec.booking` |
 
 ---
@@ -431,7 +431,7 @@ All sensitive values **must** be supplied as environment variables — there are
 |---|---|---|
 | `SPRING_DATASOURCE_URL` | Yes | PostgreSQL JDBC URL, e.g. `jdbc:postgresql://postgres:5432/capitec_booking` |
 | `SPRING_DATASOURCE_USERNAME` | Yes | PostgreSQL username (default in Compose: `capitec`) |
-| `SPRING_DATASOURCE_PASSWORD` | Yes | PostgreSQL password (default in Compose: `capitec123`) |
+| `SPRING_DATASOURCE_PASSWORD` | Yes | PostgreSQL password — must be set in `.env` |
 | `JWT_SECRET` | Yes | HMAC signing key — minimum 32 characters |
 | `CORS_ALLOWED_ORIGINS` | Yes | Comma-separated allowed frontend origins, e.g. `https://booking.capitec.co.za` |
 | `PORT` | No | HTTP port (defaults to `8080`) |
