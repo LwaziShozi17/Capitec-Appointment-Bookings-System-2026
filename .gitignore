@@ -1,24 +1,27 @@
+# ─── Gradle ───────────────────────────────────────────────────────────────────
 HELP.md
-.gradle
+.gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
+# ─── Java / Spring ────────────────────────────────────────────────────────────
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+replay_pid*
 
-### IntelliJ IDEA ###
-.idea
+# ─── Test & Coverage reports ──────────────────────────────────────────────────
+build/reports/
+build/jacoco/
+
+# ─── IDEs ─────────────────────────────────────────────────────────────────────
+
+# IntelliJ IDEA
+.idea/
 *.iws
 *.iml
 *.ipr
@@ -26,29 +29,60 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
-### NetBeans ###
+# Eclipse / STS
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+# NetBeans
 /nbproject/private/
 /nbbuild/
-/dist/
 /nbdist/
 /.nb-gradle/
 
-### VS Code ###
+# VS Code
 .vscode/
 
-### Environment & Secrets ###
+# ─── Node / Frontend ──────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+node_modules/
+
+# ─── Environment & Secrets ────────────────────────────────────────────────────
 .env
 .env.local
 .env.*.local
+*.pem
+*.key
+secrets/
 
-### OS ###
+# ─── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V8
+.Trashes
 Thumbs.db
+desktop.ini
 
-### Docker ###
+# ─── Docker ───────────────────────────────────────────────────────────────────
 docker-compose.override.yml
 
-### Claude / AI tooling ###
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+spring.log
+
+# ─── Claude / AI tooling ──────────────────────────────────────────────────────
 .agents/
 .claude/
 .claude-flow/
@@ -57,7 +91,7 @@ ALIGN_TOKENS_PROMPT.md
 IMPROVEMENT_PLAN.md
 SYSTEM_ANALYSIS.md
 
-### Local ###
+# ─── Misc local ───────────────────────────────────────────────────────────────
 local.properties
 qodana.yaml
 .github/workflows/qodana_code_quality.yml
