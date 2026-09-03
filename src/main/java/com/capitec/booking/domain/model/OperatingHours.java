@@ -5,7 +5,9 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "operating_hours")
+@Table(name = "operating_hours", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"branch_id", "day_of_week"})
+})
 public class OperatingHours {
 
     @Id
