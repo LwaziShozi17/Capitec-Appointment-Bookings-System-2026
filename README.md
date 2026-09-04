@@ -11,11 +11,19 @@ A full-stack appointment booking system that lets Capitec Bank customers schedul
 ### Step 1 — Clone and enter the project
 
 ```bash
-git clone https://github.com/LwaziShozi17/Capitec-Appointment-Bookings-System-2026-2026.git
-cd Capitec-Appointment-Bookings-System-2026-2026
+git clone https://github.com/LwaziShozi17/Capitec-Appointment-Bookings-System-2027.git
+cd Capitec-Appointment-Bookings-System-2027
 ```
 
-### Step 2 — Build and start all containers
+### Step 2 — Generate the environment file
+
+```bash
+bash scripts/setup-env.sh
+```
+
+This creates a `.env` in the project root with randomly generated secrets. Safe to re-run — pass `--force` to regenerate.
+
+### Step 3 — Build and start all containers
 
 ```bash
 docker compose up --build
@@ -82,10 +90,10 @@ docker run -p 80:80 capitec-booking-frontend:local
 
 Two accounts are seeded automatically on first startup. Passwords are defined in `src/main/resources/data.sql`.
 
-| Role | Email |
-|---|---|
-| **Admin** | `admin@capitec.co.za` |
-| **Customer** | `user@capitec.co.za` |
+| Role | Email | Password |
+|---|---|---|
+| **Admin** | `admin@capitec.co.za` | `Admin@123` |
+| **Customer** | `user@capitec.co.za` | `User@123` |
 
 - The **Admin** account has access to the `/admin` dashboard and all `PATCH /api/v1/admin/...` endpoints.
 - The **Customer** account can browse branches, book appointments, and view their booking history.
@@ -161,19 +169,14 @@ In development the backend uses an **H2 in-memory database** — no PostgreSQL i
 
 This starts PostgreSQL, the Spring Boot backend, and the React frontend all together.
 
-**Step 1 — Copy the environment file:**
+**Step 1 — Generate the environment file:**
 ```bash
-cp .env.example .env
+bash scripts/setup-env.sh
 ```
 
-**Step 2 — Open `.env` and set a real JWT secret (minimum 32 characters):**
-```
-JWT_SECRET=your-very-long-and-secret-key-minimum-32-chars
-POSTGRES_USER=capitec
-POSTGRES_PASSWORD=your-db-password
-```
+This writes a `.env` to the project root with randomly generated `POSTGRES_PASSWORD` and `JWT_SECRET` values. To customise values instead, copy the template manually: `cp .env.example .env` and edit it.
 
-**Step 3 — Build and start all services:**
+**Step 2 — Build and start all services:**
 ```bash
 docker compose up --build
 ```
@@ -239,10 +242,10 @@ The Vite dev server proxies all `/api/v1` requests to the backend on port 8080.
 
 Two accounts are seeded automatically when the app starts. Passwords are defined in `src/main/resources/data.sql`.
 
-| Role | Email |
-|---|---|
-| Admin | `admin@capitec.co.za` |
-| Customer | `user@capitec.co.za` |
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@capitec.co.za` | `Admin@123` |
+| Customer | `user@capitec.co.za` | `User@123` |
 
 The admin account can access `/admin` in the UI and all `PATCH /api/v1/admin/...` endpoints.
 
@@ -377,6 +380,7 @@ Interactive docs are available at `/swagger-ui.html`. Below is a quick reference
 │   └── security.yml             # Scheduled CodeQL + Trivy vulnerability scans
 │
 ├── scripts/
+│   ├── setup-env.sh             # Generates .env with random secrets for local/Docker runs
 │   └── smoke-test.sh            # Post-deploy health check (frontend, /health, /api/v1/branches, SPA routing)
 │
 ├── Dockerfile                   # Backend: eclipse-temurin:17-jammy (amd64 + arm64), JDK build → JRE runtime, non-root user
