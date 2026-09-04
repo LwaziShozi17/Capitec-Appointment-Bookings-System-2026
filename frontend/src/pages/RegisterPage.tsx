@@ -3,6 +3,7 @@ import type { AxiosError } from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+
 export default function RegisterPage() {
   const [form, setForm] = useState({
     firstName: '',
@@ -54,15 +55,20 @@ export default function RegisterPage() {
   return (
     <div className="min-h-[80vh] flex items-center justify-center">
       <div className="w-full max-w-md">
-        <div className="bg-surface rounded-xl shadow-sm border border-outline p-8">
-          <div className="text-center mb-8">
-            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-white font-bold text-lg">C</span>
+        <div className="text-center mb-7">
+          <Link to="/" className="inline-flex items-center gap-2 mb-5">
+            <div className="w-6 h-6 bg-primary-dark rounded-md flex items-center justify-center">
+              <span className="text-white font-black text-[10px]">C</span>
             </div>
-            <h1 className="text-2xl font-semibold text-text-high">Create account</h1>
-            <p className="text-sm text-text-medium mt-1">Book your branch appointment online</p>
-          </div>
+            <span className="text-sm font-bold text-text-high">
+              Capitec <span className="text-primary font-medium">Bookings</span>
+            </span>
+          </Link>
+          <h1 className="text-2xl font-bold text-text-high">Create account</h1>
+          <p className="text-sm text-text-medium mt-1">Book your branch appointment online</p>
+        </div>
 
+        <div className="bg-surface rounded-2xl shadow-sm border border-outline p-8">
           {error && (
             <div role="alert" className="mb-4 p-3 bg-error/10 border border-error/30 rounded-lg text-sm text-error">
               {error}

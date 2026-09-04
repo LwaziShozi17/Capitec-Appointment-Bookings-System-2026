@@ -59,10 +59,12 @@ export default function Layout() {
             {/* Logo */}
             <div className="flex items-center gap-8">
               <Link to="/" className="flex items-center gap-2.5" onClick={() => setMobileOpen(false)}>
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-sm">
-                  <span className="text-white font-bold text-sm">C</span>
+                <div className="w-7 h-7 bg-primary-dark rounded-md flex items-center justify-center shadow-sm">
+                  <span className="text-white font-black text-xs tracking-tight">C</span>
                 </div>
-                <span className="font-bold text-text-high tracking-tight">Capitec Booking</span>
+                <span className="font-bold text-text-high tracking-tight">
+                  Capitec <span className="text-primary font-medium">Bookings</span>
+                </span>
               </Link>
 
               {/* Desktop nav links */}
