@@ -54,7 +54,7 @@ services:
     image: ${FRONTEND_IMAGE:-capitec-booking-frontend}:${IMAGE_TAG:-local}
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "80:8081"
     depends_on:
       - backend
     deploy:

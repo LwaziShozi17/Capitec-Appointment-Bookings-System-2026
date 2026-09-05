@@ -18,7 +18,7 @@ RUN sed -i 's/^user nginx;/# user nginx; # running as non-root/' /etc/nginx/ngin
 COPY --from=build --chown=nginx:nginx /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 USER nginx
-EXPOSE 80
+EXPOSE 8081
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-  CMD wget -qO- http://localhost:80/ || exit 1
+  CMD wget -qO- http://localhost:8081/ || exit 1
 CMD ["nginx", "-g", "daemon off;"]

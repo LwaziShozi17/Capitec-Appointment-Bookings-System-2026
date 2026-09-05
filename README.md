@@ -4,9 +4,11 @@ A full-stack appointment booking system that lets Capitec Bank customers schedul
 
 ---
 
-## Quick Start — Docker
+## Quick Start — Docker / Podman Compose
 
-> The fastest way to run the full stack (PostgreSQL + Spring Boot backend + React frontend) is with Docker Compose. No Java or Node.js install required.
+> The fastest way to run the full stack (PostgreSQL + Spring Boot backend + React frontend) is with Docker Compose or Podman Compose. No Java or Node.js install required.
+
+> **Podman (rootless) note:** Nginx runs as a non-root user and listens on port **8081** inside the container. Port 8081 is mapped to host port 80, so the app is still accessible at `http://localhost` — no change from your perspective.
 
 ### Step 1 — Clone and enter the project
 
@@ -26,12 +28,14 @@ This creates a `.env` in the project root with randomly generated secrets. Safe 
 ### Step 3 — Build and start all containers
 
 ```bash
-docker compose up --build
+docker compose up --build        # Docker
+# or
+podman compose up --build        # Podman
 ```
 
-Docker will build the backend image (multi-stage, JRE runtime), the frontend image (Node build → Nginx), and pull the PostgreSQL image, then wire them all together.
+This builds the backend image (multi-stage, JRE runtime), the frontend image (Node build → Nginx), and pulls the PostgreSQL image, then wires them all together.
 
-### Step 3 — Open the app
+### Step 4 — Open the app
 
 | Service | URL |
 |---|---|
@@ -44,6 +48,8 @@ Docker will build the backend image (multi-stage, JRE runtime), the frontend ima
 
 ```bash
 docker compose down
+# or
+podman compose down
 ```
 
 To also delete the PostgreSQL data volume:
@@ -161,11 +167,11 @@ In development the backend uses an **H2 in-memory database** — no PostgreSQL i
 
 - **Java 17** — [Download](https://adoptium.net/)
 - **Node.js 20+** — [Download](https://nodejs.org/)
-- **Docker Desktop or Rancher Desktop** *(only needed for the Docker option)* — [Docker Desktop](https://www.docker.com/products/docker-desktop/) / [Rancher Desktop](https://rancherdesktop.io/)
+- **Docker Desktop, Podman Desktop, or Rancher Desktop** *(only needed for the Docker/Podman option)* — [Docker Desktop](https://www.docker.com/products/docker-desktop/) / [Podman Desktop](https://podman-desktop.io/) / [Rancher Desktop](https://rancherdesktop.io/)
 
 ---
 
-## Option 1 — Run with Docker Compose (Full Stack)
+## Option 1 — Run with Docker / Podman Compose (Full Stack)
 
 This starts PostgreSQL, the Spring Boot backend, and the React frontend all together.
 
@@ -179,9 +185,11 @@ This writes a `.env` to the project root with randomly generated `POSTGRES_PASSW
 **Step 2 — Build and start all services:**
 ```bash
 docker compose up --build
+# or
+podman compose up --build
 ```
 
-**Step 4 — Open the app:**
+**Step 3 — Open the app:**
 
 | Service | URL |
 |---|---|
@@ -192,7 +200,7 @@ docker compose up --build
 
 **Stop the stack:**
 ```bash
-docker compose down
+docker compose down   # or: podman compose down
 ```
 
 ---
@@ -209,8 +217,10 @@ This is the recommended way to develop. The backend uses an H2 in-memory databas
 
 > On Windows, use `gradlew.bat bootRun`
 
+The `dev` profile is active by default. It uses H2 in-memory with a separate `data-dev.sql` seed file that is compatible with H2 (the `data.sql` file uses PostgreSQL-only `ON CONFLICT` syntax and is only used in the prod/Docker profile).
+
 The backend starts on `http://localhost:8080`.  
-The H2 database is seeded automatically on first run.
+The H2 database is seeded automatically on every startup (schema is recreated each run).
 
 **Verify it's running:**
 ```bash
@@ -352,9 +362,10 @@ Interactive docs are available at `/swagger-ui.html`. Below is a quick reference
 │
 ├── src/main/resources/
 │   ├── application.properties   # Activates 'dev' profile by default
-│   ├── application-dev.yml      # H2 in-memory, H2 console enabled, data.sql seed enabled
+│   ├── application-dev.yml      # H2 in-memory, H2 console enabled, uses data-dev.sql
 │   ├── application-prod.yml     # PostgreSQL, reads credentials from environment variables
-│   └── data.sql                 # Seed: 45 branches, 8 services, 12 SA holidays, demo slots & appointments
+│   ├── data.sql                 # Seed for prod/PostgreSQL (uses ON CONFLICT for idempotency)
+│   └── data-dev.sql             # Seed for dev/H2 (same data, without PostgreSQL-only ON CONFLICT syntax)
 │
 ├── src/test/                    # JUnit 5 tests (controller, service, security, integration)
 │
@@ -421,6 +432,7 @@ Activated automatically when you run `./gradlew bootRun`. No PostgreSQL or Docke
 | Schema management | `create-drop` — rebuilt on every restart |
 | Seed data | Loaded from `data.sql` on startup |
 | CORS origins | `http://localhost:5173` (Vite dev server) |
+| Seed file | `data-dev.sql` (H2-compatible; loaded via `spring.sql.init.data-locations`) |
 | JWT secret | Read from `JWT_SECRET` env var — must be set before starting |
 | Log level | `DEBUG` for `com.capitec.booking` |
 

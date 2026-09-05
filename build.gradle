@@ -67,3 +67,19 @@ jacocoTestCoverageVerification {
 		}
 	}
 }
+
+bootRun {
+	// Load .env file into the bootRun environment so JWT_SECRET and DB vars are available locally.
+	def envFile = rootProject.file('.env')
+	if (envFile.exists()) {
+		envFile.eachLine { line ->
+			line = line.trim()
+			if (line && !line.startsWith('#') && line.contains('=')) {
+				def idx = line.indexOf('=')
+				def key = line.substring(0, idx).trim()
+				def value = line.substring(idx + 1).trim()
+				environment key, value
+			}
+		}
+	}
+}
