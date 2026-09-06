@@ -168,7 +168,7 @@ jobs:
           sbom: true
 
       - name: Trivy scan – backend image
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/capitec-booking-backend:sha-${{ github.sha }}
           format: sarif

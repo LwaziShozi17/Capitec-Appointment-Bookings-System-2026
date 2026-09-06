@@ -70,6 +70,6 @@ describe('Layout', () => {
 
   it('shows the Capitec Booking brand', () => {
     renderLayout();
-    expect(screen.getByText('Capitec Booking')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Capitec/i })).toBeInTheDocument();
   });
 });
