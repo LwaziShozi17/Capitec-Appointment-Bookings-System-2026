@@ -59,7 +59,8 @@ export default function BookingPage() {
   const [customerEmail, setCustomerEmail] = useState(user?.email || '');
   const [customerPhone, setCustomerPhone] = useState('');
   const [loading, setLoading] = useState(true);
-  const [pendingDate, setPendingDate] = useState('');
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsError, setSlotsError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -74,18 +75,24 @@ export default function BookingPage() {
     });
   }, [branchId]);
 
-  // slotsLoading is true when a fetch is in-flight (pendingDate differs from the last resolved date)
-  const slotsLoading = pendingDate !== selectedDate && selectedDate !== '';
-
   useEffect(() => {
     if (!selectedDate || !branchId) return;
     let cancelled = false;
+    setSlotsLoading(true);
+    setSlotsError('');
     api
       .get<AppointmentSlot[]>('/slots', { params: { branchId, date: selectedDate } })
       .then(({ data }) => {
         if (!cancelled) {
           setSlots(data);
-          setPendingDate(selectedDate);
+          setSlotsLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSlots([]);
+          setSlotsLoading(false);
+          setSlotsError('Could not load slots. Please try again.');
         }
       });
     return () => { cancelled = true; };
@@ -265,6 +272,10 @@ export default function BookingPage() {
 
               {slotsLoading ? (
                 <SkeletonSlotGrid />
+              ) : slotsError ? (
+                <div className="text-center py-8 bg-surface-background rounded-xl border border-dashed border-error/40">
+                  <p className="text-sm text-error font-medium">{slotsError}</p>
+                </div>
               ) : slots.length > 0 ? (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                   {slots.map((slot) => {
