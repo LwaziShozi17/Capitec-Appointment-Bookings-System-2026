@@ -20,8 +20,9 @@ export default function RegisterPage() {
   const validate = (): string => {
     if (!form.firstName.trim()) return 'First name is required';
     if (!form.lastName.trim()) return 'Last name is required';
-    if (!form.email.includes('@')) return 'Please enter a valid email address';
-    const strongPassword = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email.trim())) return 'Please enter a valid email address';
+    const strongPassword = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
     if (!strongPassword.test(form.password)) {
       return 'Password must be at least 8 characters with uppercase, lowercase, digit, and special character';
     }
@@ -38,11 +39,26 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      await register(form);
+      await register({
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        phoneNumber: form.phoneNumber.trim() || undefined,
+      });
       navigate('/');
     } catch (err) {
-      const message = (err as AxiosError<{ message?: string }>).response?.data?.message
-        || (err instanceof Error ? err.message : undefined);
+      const data = (err as AxiosError<{ message?: string; error?: string; details?: Record<string, string> }>).response?.data;
+      let message = data?.message;
+      if (!message && data?.details) {
+        message = Object.values(data.details).join(', ');
+      }
+      if (!message && data?.error) {
+        message = data.error;
+      }
+      if (!message && err instanceof Error) {
+        message = err.message;
+      }
       setError(message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);

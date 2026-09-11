@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
 type ToastVariant = 'success' | 'error' | 'info';
 
@@ -25,14 +25,18 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const add = useCallback((message: string, variant: ToastVariant) => {
     const id = ++nextId;
     setToasts((prev) => [...prev, { id, message, variant }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 5000);
   }, []);
 
-  const value: ToastContextValue = {
-    success: (msg) => add(msg, 'success'),
-    error: (msg) => add(msg, 'error'),
-    info: (msg) => add(msg, 'info'),
-  };
+  const success = useCallback((msg: string) => add(msg, 'success'), [add]);
+  const error = useCallback((msg: string) => add(msg, 'error'), [add]);
+  const info = useCallback((msg: string) => add(msg, 'info'), [add]);
+
+  const value = useMemo<ToastContextValue>(() => ({
+    success,
+    error,
+    info,
+  }), [success, error, info]);
 
   const VARIANT_STYLES: Record<ToastVariant, string> = {
     success: 'bg-success text-white',

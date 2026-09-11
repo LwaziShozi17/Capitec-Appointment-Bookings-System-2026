@@ -72,4 +72,42 @@ class GlobalExceptionHandlerTest {
 
         assertThat(response.getBody()).containsEntry("error", "Bad Request");
     }
+
+    @Test
+    void handleValidation_includesMessageAndDetails() {
+        org.springframework.validation.BindingResult bindingResult = new org.springframework.validation.BeanPropertyBindingResult(new Object(), "target");
+        bindingResult.addError(new org.springframework.validation.FieldError("target", "email", "Invalid email format"));
+
+        org.springframework.core.MethodParameter methodParameter = new org.springframework.core.MethodParameter(
+                GlobalExceptionHandlerTest.class.getDeclaredMethods()[0], -1);
+        org.springframework.web.bind.MethodArgumentNotValidException ex =
+                new org.springframework.web.bind.MethodArgumentNotValidException(methodParameter, bindingResult);
+
+        ResponseEntity<Map<String, Object>> response = handler.handleValidation(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).containsEntry("error", "Validation Failed");
+        assertThat(response.getBody()).containsEntry("message", "Invalid email format");
+        assertThat(response.getBody()).containsKey("details");
+    }
+
+    @Test
+    void handleIllegalArgument_returns400() {
+        IllegalArgumentException ex = new IllegalArgumentException("Invalid argument provided");
+
+        ResponseEntity<Map<String, Object>> response = handler.handleIllegalArgument(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).containsEntry("message", "Invalid argument provided");
+    }
+
+    @Test
+    void handleGeneralException_returns500() {
+        RuntimeException ex = new RuntimeException("Server error");
+
+        ResponseEntity<Map<String, Object>> response = handler.handleGeneralException(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getBody()).containsEntry("message", "Server error");
+    }
 }

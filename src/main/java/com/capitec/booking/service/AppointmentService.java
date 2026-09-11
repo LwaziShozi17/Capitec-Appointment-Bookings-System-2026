@@ -6,6 +6,7 @@ import com.capitec.booking.domain.model.Appointment;
 import com.capitec.booking.domain.model.AppointmentSlot;
 import com.capitec.booking.domain.model.ServiceType;
 import com.capitec.booking.dto.request.BookingRequest;
+import com.capitec.booking.dto.request.UpdateAppointmentRequest;
 import com.capitec.booking.exception.InvalidOperationException;
 import com.capitec.booking.exception.ResourceNotFoundException;
 import com.capitec.booking.exception.SlotNotAvailableException;
@@ -59,9 +60,9 @@ public class AppointmentService {
         appointment.setUserId(request.getUserId());
         appointment.setSlot(slot);
         appointment.setServiceType(serviceType);
-        appointment.setCustomerName(request.getCustomerName());
-        appointment.setCustomerPhone(request.getCustomerPhone());
-        appointment.setCustomerEmail(request.getCustomerEmail());
+        appointment.setCustomerName(request.getCustomerName() != null ? request.getCustomerName().trim() : null);
+        appointment.setCustomerPhone(request.getCustomerPhone() != null && !request.getCustomerPhone().isBlank() ? request.getCustomerPhone().trim() : null);
+        appointment.setCustomerEmail(request.getCustomerEmail() != null ? request.getCustomerEmail().trim().toLowerCase() : null);
         appointment.setStatus(AppointmentStatus.PENDING);
 
         Appointment saved = appointmentRepository.save(appointment);
@@ -105,6 +106,68 @@ public class AppointmentService {
     public Appointment cancelAppointmentAsAdmin(Long appointmentId) {
         Appointment appointment = getAppointment(appointmentId);
         return performCancellation(appointment);
+    }
+
+    @Transactional
+    public Appointment updateAppointment(Long appointmentId, UpdateAppointmentRequest request, String authenticatedUserId) {
+        log.info("User {} requesting update of appointment {}", authenticatedUserId, appointmentId);
+        Appointment appointment = getAppointment(appointmentId);
+        validateOwnership(appointment, authenticatedUserId);
+        return performUpdate(appointment, request);
+    }
+
+    @Transactional
+    public Appointment updateAppointmentAsAdmin(Long appointmentId, UpdateAppointmentRequest request) {
+        Appointment appointment = getAppointment(appointmentId);
+        return performUpdate(appointment, request);
+    }
+
+    private Appointment performUpdate(Appointment appointment, UpdateAppointmentRequest request) {
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new InvalidOperationException("Cannot update a cancelled appointment");
+        }
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
+            throw new InvalidOperationException("Cannot update a completed appointment");
+        }
+
+        if (request.getSlotId() != null && !request.getSlotId().equals(appointment.getSlot().getId())) {
+            AppointmentSlot newSlot = slotRepository.findById(request.getSlotId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Slot not found: " + request.getSlotId()));
+
+            if (newSlot.getStatus() != SlotStatus.AVAILABLE) {
+                log.warn("Slot {} is not available, status={}", request.getSlotId(), newSlot.getStatus());
+                throw new SlotNotAvailableException("Slot is not available for booking");
+            }
+
+            AppointmentSlot oldSlot = appointment.getSlot();
+            oldSlot.setStatus(SlotStatus.AVAILABLE);
+            slotRepository.save(oldSlot);
+
+            newSlot.setStatus(SlotStatus.BOOKED);
+            slotRepository.save(newSlot);
+
+            appointment.setSlot(newSlot);
+        }
+
+        if (request.getServiceTypeId() != null && !request.getServiceTypeId().equals(appointment.getServiceType().getId())) {
+            ServiceType serviceType = serviceTypeRepository.findById(request.getServiceTypeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Service type not found: " + request.getServiceTypeId()));
+            appointment.setServiceType(serviceType);
+        }
+
+        if (request.getCustomerName() != null && !request.getCustomerName().isBlank()) {
+            appointment.setCustomerName(request.getCustomerName());
+        }
+        if (request.getCustomerPhone() != null) {
+            appointment.setCustomerPhone(request.getCustomerPhone());
+        }
+        if (request.getCustomerEmail() != null && !request.getCustomerEmail().isBlank()) {
+            appointment.setCustomerEmail(request.getCustomerEmail());
+        }
+
+        Appointment updated = appointmentRepository.save(appointment);
+        log.info("Appointment updated successfully id={}", updated.getId());
+        return updated;
     }
 
     private Appointment performCancellation(Appointment appointment) {

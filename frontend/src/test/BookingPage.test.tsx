@@ -199,6 +199,37 @@ describe('BookingPage', () => {
     });
   });
 
+  it('shows error details when backend returns validation details map', async () => {
+    vi.mocked(api.post).mockRejectedValueOnce({
+      response: { data: { details: { customerName: 'Customer name is required' } } },
+    });
+    renderBooking();
+
+    await waitFor(() => {
+      expect(screen.getByText('Card Collection')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText('Card Collection'));
+
+    const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement;
+    fireEvent.change(dateInput, { target: { value: '2099-12-01' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('08:00')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText('08:00'));
+
+    const nameInput = screen.getAllByRole('textbox')[0];
+    await userEvent.type(nameInput, 'Test User');
+
+    await userEvent.click(screen.getByRole('button', { name: /confirm booking/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Customer name is required')).toBeInTheDocument();
+    });
+  });
+
   it('shows no slots message when date has no availability', async () => {
     vi.mocked(api.get).mockImplementation((url: string) => {
       if (url === '/branches/1') return Promise.resolve({ data: mockBranch });

@@ -38,19 +38,21 @@ public class AuthService {
         this.auditLogger = auditLogger;
     }
 
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
-        log.info("Registration attempt for email={}", request.getEmail());
-        if (userRepository.existsByEmail(request.getEmail())) {
-            log.warn("Registration failed: email already exists email={}", request.getEmail());
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        log.info("Registration attempt for email={}", email);
+        if (userRepository.existsByEmail(email)) {
+            log.warn("Registration failed: email already exists email={}", email);
             throw new InvalidOperationException("Email already registered");
         }
 
         User user = new User();
-        user.setEmail(request.getEmail());
+        user.setEmail(email);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setPhoneNumber(request.getPhoneNumber());
+        user.setFirstName(request.getFirstName() != null ? request.getFirstName().trim() : "");
+        user.setLastName(request.getLastName() != null ? request.getLastName().trim() : "");
+        user.setPhoneNumber(request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty() ? request.getPhoneNumber().trim() : null);
         user.setRole(Role.USER);
 
         user = userRepository.save(user);
@@ -63,18 +65,19 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        log.info("Login attempt for email={}", request.getEmail());
-        User user = userRepository.findByEmail(request.getEmail())
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        log.info("Login attempt for email={}", email);
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new InvalidOperationException("Invalid email or password"));
 
         if (user.isAccountLocked()) {
-            log.warn("Login rejected: account locked email={}", request.getEmail());
-            auditLogger.logLoginFailed(request.getEmail(), "system");
+            log.warn("Login rejected: account locked email={}", email);
+            auditLogger.logLoginFailed(email, "system");
             throw new InvalidOperationException("Account is locked. Please try again later.");
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            log.warn("Login failed: invalid password email={}", request.getEmail());
+            log.warn("Login failed: invalid password email={}", email);
             handleFailedLogin(user);
             throw new InvalidOperationException("Invalid email or password");
         }

@@ -13,9 +13,12 @@ public class AppointmentResponse {
     private String customerName;
     private String customerEmail;
     private String customerPhone;
+    private Long branchId;
     private String branchName;
     private String branchAddress;
+    private Long serviceTypeId;
     private String serviceName;
+    private Long slotId;
     private LocalDate date;
     private LocalTime startTime;
     private LocalTime endTime;
@@ -40,14 +43,23 @@ public class AppointmentResponse {
     public String getCustomerPhone() { return customerPhone; }
     public void setCustomerPhone(String customerPhone) { this.customerPhone = customerPhone; }
 
+    public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
+
     public String getBranchName() { return branchName; }
     public void setBranchName(String branchName) { this.branchName = branchName; }
 
     public String getBranchAddress() { return branchAddress; }
     public void setBranchAddress(String branchAddress) { this.branchAddress = branchAddress; }
 
+    public Long getServiceTypeId() { return serviceTypeId; }
+    public void setServiceTypeId(Long serviceTypeId) { this.serviceTypeId = serviceTypeId; }
+
     public String getServiceName() { return serviceName; }
     public void setServiceName(String serviceName) { this.serviceName = serviceName; }
+
+    public Long getSlotId() { return slotId; }
+    public void setSlotId(Long slotId) { this.slotId = slotId; }
 
     public LocalDate getDate() { return date; }
     public void setDate(LocalDate date) { this.date = date; }

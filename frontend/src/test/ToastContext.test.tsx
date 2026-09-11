@@ -42,11 +42,13 @@ describe('ToastContext', () => {
     expect(screen.getByText('FYI')).toBeInTheDocument();
   });
 
-  it('removes toast after 4 seconds', async () => {
+  it('removes toast after 5 seconds', async () => {
     const { getByRole } = renderWithToast((t) => t.success('Temporary'));
     await act(async () => { getByRole('button').click(); });
     expect(screen.getByText('Temporary')).toBeInTheDocument();
-    await act(async () => { vi.advanceTimersByTime(4001); });
+    await act(async () => { vi.advanceTimersByTime(4999); });
+    expect(screen.getByText('Temporary')).toBeInTheDocument();
+    await act(async () => { vi.advanceTimersByTime(2); });
     expect(screen.queryByText('Temporary')).not.toBeInTheDocument();
   });
 

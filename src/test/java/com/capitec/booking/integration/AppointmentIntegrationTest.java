@@ -7,6 +7,7 @@ import com.capitec.booking.domain.model.AppointmentSlot;
 import com.capitec.booking.domain.model.Branch;
 import com.capitec.booking.domain.model.ServiceType;
 import com.capitec.booking.dto.request.BookingRequest;
+import com.capitec.booking.dto.request.UpdateAppointmentRequest;
 import com.capitec.booking.repository.AppointmentRepository;
 import com.capitec.booking.repository.AppointmentSlotRepository;
 import com.capitec.booking.repository.BranchRepository;
@@ -132,5 +133,41 @@ class AppointmentIntegrationTest {
 
         AppointmentSlot updatedSlot = slotRepository.findById(slot.getId()).orElseThrow();
         assertThat(updatedSlot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+    }
+
+    @Test
+    void shouldRescheduleAppointmentAndFreeOldSlot() {
+        // Create second slot
+        AppointmentSlot slot2 = new AppointmentSlot(branch, LocalDate.of(2026, 6, 16),
+                LocalTime.of(10, 0), LocalTime.of(10, 30));
+        slot2 = slotRepository.save(slot2);
+
+        BookingRequest bookRequest = new BookingRequest();
+        bookRequest.setSlotId(slot.getId());
+        bookRequest.setServiceTypeId(serviceType.getId());
+        bookRequest.setUserId("user@test.com");
+        bookRequest.setCustomerName("Original Name");
+        bookRequest.setCustomerEmail("user@test.com");
+
+        Appointment appointment = appointmentService.bookAppointment(bookRequest);
+        assertThat(appointment.getSlot().getId()).isEqualTo(slot.getId());
+
+        // Update / reschedule to slot2
+        UpdateAppointmentRequest updateRequest = new UpdateAppointmentRequest();
+        updateRequest.setSlotId(slot2.getId());
+        updateRequest.setCustomerName("Updated Name");
+
+        Appointment updated = appointmentService.updateAppointment(appointment.getId(), updateRequest, "user@test.com");
+
+        assertThat(updated.getSlot().getId()).isEqualTo(slot2.getId());
+        assertThat(updated.getCustomerName()).isEqualTo("Updated Name");
+
+        // Old slot should be AVAILABLE again
+        AppointmentSlot oldSlotReloaded = slotRepository.findById(slot.getId()).orElseThrow();
+        assertThat(oldSlotReloaded.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+
+        // New slot should be BOOKED
+        AppointmentSlot newSlotReloaded = slotRepository.findById(slot2.getId()).orElseThrow();
+        assertThat(newSlotReloaded.getStatus()).isEqualTo(SlotStatus.BOOKED);
     }
 }

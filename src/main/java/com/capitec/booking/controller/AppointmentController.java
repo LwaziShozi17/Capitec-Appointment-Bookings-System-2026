@@ -2,6 +2,7 @@ package com.capitec.booking.controller;
 
 import com.capitec.booking.domain.model.Appointment;
 import com.capitec.booking.dto.request.BookingRequest;
+import com.capitec.booking.dto.request.UpdateAppointmentRequest;
 import com.capitec.booking.dto.response.AppointmentResponse;
 import com.capitec.booking.mapper.AppointmentMapper;
 import com.capitec.booking.service.AppointmentService;
@@ -60,6 +61,19 @@ public class AppointmentController {
     public ResponseEntity<AppointmentResponse> cancelAppointment(@PathVariable Long id,
                                                                   Authentication authentication) {
         Appointment appointment = appointmentService.cancelAppointment(id, authentication.getName());
+        return ResponseEntity.ok(mapper.toResponse(appointment));
+    }
+
+    @Operation(summary = "Update / reschedule an appointment", description = "Updates an existing appointment's date, time slot, or details for the authenticated user")
+    @ApiResponse(responseCode = "200", description = "Appointment updated successfully")
+    @ApiResponse(responseCode = "404", description = "Appointment or slot not found")
+    @ApiResponse(responseCode = "409", description = "Slot is no longer available")
+    @PutMapping("/{id}")
+    public ResponseEntity<AppointmentResponse> updateAppointment(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateAppointmentRequest request,
+            Authentication authentication) {
+        Appointment appointment = appointmentService.updateAppointment(id, request, authentication.getName());
         return ResponseEntity.ok(mapper.toResponse(appointment));
     }
 

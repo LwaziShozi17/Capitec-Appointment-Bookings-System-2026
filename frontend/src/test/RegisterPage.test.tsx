@@ -134,4 +134,46 @@ describe('RegisterPage', () => {
       expect(screen.queryByText('Creating account...')).not.toBeInTheDocument();
     });
   });
+
+  it('allows passwords with various special characters like # and _', async () => {
+    vi.mocked(api.post).mockResolvedValueOnce({
+      data: { token: 'jwt', email: 'hash@test.com', name: 'Hash User', role: 'USER' },
+    });
+
+    renderRegister();
+    const textInputs = screen.getAllByRole('textbox');
+    const passwordInput = document.querySelector('input[type="password"]') as HTMLElement;
+
+    await userEvent.type(textInputs[0], 'Hash');
+    await userEvent.type(textInputs[1], 'User');
+    await userEvent.type(textInputs[2], 'hash@test.com');
+    await userEvent.type(passwordInput, 'Password123#');
+
+    await userEvent.click(screen.getByRole('button', { name: /create account/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/');
+    });
+  });
+
+  it('displays field validation errors when backend returns details object', async () => {
+    vi.mocked(api.post).mockRejectedValueOnce({
+      response: { data: { error: 'Validation Failed', details: { email: 'Invalid email format' } } },
+    });
+
+    renderRegister();
+    const textInputs = screen.getAllByRole('textbox');
+    const passwordInput = document.querySelector('input[type="password"]') as HTMLElement;
+
+    await userEvent.type(textInputs[0], 'Test');
+    await userEvent.type(textInputs[1], 'User');
+    await userEvent.type(textInputs[2], 'test@domain.com');
+    await userEvent.type(passwordInput, 'Password1!');
+
+    await userEvent.click(screen.getByRole('button', { name: /create account/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Invalid email format')).toBeInTheDocument();
+    });
+  });
 });

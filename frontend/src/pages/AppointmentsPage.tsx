@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AxiosError } from 'axios';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import ConfirmModal from '../components/ui/ConfirmModal';
+import EditBookingModal from '../components/EditBookingModal';
 import { SkeletonCard } from '../components/ui/Skeleton';
 import type { Appointment, AppointmentStatus } from '../types';
 
@@ -19,21 +20,27 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelId, setCancelId] = useState<number | null>(null);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const toast = useToast();
   const successMessage = (location.state as { message?: string } | null)?.message;
+  const toastShownRef = useRef(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const loadAppointments = useCallback(() => {
     api.get<Appointment[]>('/appointments/my')
       .then(({ data }) => setAppointments(data))
       .catch(() => toast.error('Failed to load appointments. Please try again.'))
       .finally(() => setLoading(false));
-  }, []); // toast.error is stable (calls memoized add); empty dep avoids infinite refetch
+  }, [toast]);
 
   useEffect(() => {
-    if (successMessage) toast.success(successMessage);
-  }, [successMessage, toast]);
+    if (successMessage && !toastShownRef.current) {
+      toastShownRef.current = true;
+      toast.success(successMessage);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [successMessage, toast, navigate, location.pathname]);
 
   useEffect(() => {
     loadAppointments();
@@ -135,12 +142,20 @@ export default function AppointmentsPage() {
                     <span>{apt.startTime} – {apt.endTime}</span>
                   </div>
                   {apt.status !== 'CANCELLED' && apt.status !== 'COMPLETED' && (
-                    <button
-                      onClick={() => setCancelId(apt.id)}
-                      className="text-sm text-error hover:text-error-dark font-semibold transition-colors"
-                    >
-                      Cancel
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setEditingAppointment(apt)}
+                        className="text-sm text-primary hover:text-primary-dark font-semibold transition-colors"
+                      >
+                        Reschedule / Edit
+                      </button>
+                      <button
+                        onClick={() => setCancelId(apt.id)}
+                        className="text-sm text-error hover:text-error-dark font-semibold transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -158,6 +173,16 @@ export default function AppointmentsPage() {
         variant="danger"
         onConfirm={handleConfirmCancel}
         onCancel={() => setCancelId(null)}
+      />
+
+      <EditBookingModal
+        open={editingAppointment !== null}
+        appointment={editingAppointment}
+        onClose={() => setEditingAppointment(null)}
+        onSuccess={() => {
+          setEditingAppointment(null);
+          loadAppointments();
+        }}
       />
     </div>
   );

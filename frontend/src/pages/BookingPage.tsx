@@ -55,7 +55,7 @@ export default function BookingPage() {
   const [selectedService, setSelectedService] = useState<ServiceType | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
-  const [customerName, setCustomerName] = useState('');
+  const [customerName, setCustomerName] = useState(user?.name || '');
   const [customerEmail, setCustomerEmail] = useState(user?.email || '');
   const [customerPhone, setCustomerPhone] = useState('');
   const [loading, setLoading] = useState(true);
@@ -63,6 +63,13 @@ export default function BookingPage() {
   const [slotsError, setSlotsError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      if (user.email && !customerEmail) setCustomerEmail(user.email);
+      if (user.name && !customerName) setCustomerName(user.name);
+    }
+  }, [user]);
 
   useEffect(() => {
     Promise.all([
@@ -117,14 +124,16 @@ export default function BookingPage() {
       await api.post('/appointments', {
         slotId: selectedSlot,
         serviceTypeId: selectedService.id,
-        customerName,
-        customerEmail,
-        customerPhone,
+        customerName: customerName.trim(),
+        customerEmail: customerEmail.trim(),
+        customerPhone: customerPhone.trim() || undefined,
       });
       navigate('/appointments', { state: { message: 'Appointment booked successfully!' } });
     } catch (err) {
-      const message = (err as AxiosError<{ message?: string }>).response?.data?.message;
-      setError(message || 'Booking failed. Please try again.');
+      const errRes = (err as AxiosError<{ message?: string; details?: Record<string, string> }>).response?.data;
+      const detailMessages = errRes?.details ? Object.values(errRes.details).join(', ') : null;
+      const message = errRes?.message || detailMessages;
+      setError(message || (err instanceof Error ? err.message : 'Booking failed. Please try again.'));
     } finally {
       setSubmitting(false);
     }

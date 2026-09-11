@@ -104,4 +104,17 @@ class AppointmentControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
+
+    @Test
+    void shouldReturn200OnSuccessfulUpdate() {
+        when(appointmentService.updateAppointment(eq(1L), any(), eq("user@test.com"))).thenReturn(sampleAppointment);
+
+        var request = new com.capitec.booking.dto.request.UpdateAppointmentRequest();
+        request.setSlotId(2L);
+        request.setCustomerName("John Doe");
+
+        ResponseEntity<?> response = controller.updateAppointment(1L, request, authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
 }

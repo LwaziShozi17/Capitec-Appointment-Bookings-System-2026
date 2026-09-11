@@ -41,9 +41,12 @@ export interface Appointment {
   customerEmail: string;
   customerPhone: string;
   status: AppointmentStatus;
+  branchId?: number;
   branchName: string;
   branchAddress: string;
+  serviceTypeId?: number;
   serviceName: string;
+  slotId?: number;
   date: string;
   startTime: string;
   endTime: string;

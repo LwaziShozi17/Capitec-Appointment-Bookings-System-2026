@@ -17,12 +17,21 @@ public class AppointmentMapper {
         response.setCustomerName(appointment.getCustomerName());
         response.setCustomerEmail(appointment.getCustomerEmail());
         response.setCustomerPhone(appointment.getCustomerPhone());
-        response.setBranchName(appointment.getSlot().getBranch().getName());
-        response.setBranchAddress(appointment.getSlot().getBranch().getAddress());
-        response.setServiceName(appointment.getServiceType().getName());
-        response.setDate(appointment.getSlot().getDate());
-        response.setStartTime(appointment.getSlot().getStartTime());
-        response.setEndTime(appointment.getSlot().getEndTime());
+        if (appointment.getSlot() != null) {
+            if (appointment.getSlot().getBranch() != null) {
+                response.setBranchId(appointment.getSlot().getBranch().getId());
+                response.setBranchName(appointment.getSlot().getBranch().getName());
+                response.setBranchAddress(appointment.getSlot().getBranch().getAddress());
+            }
+            response.setSlotId(appointment.getSlot().getId());
+            response.setDate(appointment.getSlot().getDate());
+            response.setStartTime(appointment.getSlot().getStartTime());
+            response.setEndTime(appointment.getSlot().getEndTime());
+        }
+        if (appointment.getServiceType() != null) {
+            response.setServiceTypeId(appointment.getServiceType().getId());
+            response.setServiceName(appointment.getServiceType().getName());
+        }
         response.setStatus(appointment.getStatus());
         response.setCreatedAt(appointment.getCreatedAt());
         return response;

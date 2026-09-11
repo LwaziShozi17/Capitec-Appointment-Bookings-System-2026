@@ -7,6 +7,7 @@ import com.capitec.booking.domain.model.AppointmentSlot;
 import com.capitec.booking.domain.model.Branch;
 import com.capitec.booking.domain.model.ServiceType;
 import com.capitec.booking.dto.request.BookingRequest;
+import com.capitec.booking.dto.request.UpdateAppointmentRequest;
 import com.capitec.booking.exception.InvalidOperationException;
 import com.capitec.booking.exception.ResourceNotFoundException;
 import com.capitec.booking.exception.SlotNotAvailableException;
@@ -339,5 +340,94 @@ class AppointmentServiceTest {
         assertThatThrownBy(() -> appointmentService.getAppointment(99L))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Appointment not found");
+    }
+
+    @Test
+    void shouldUpdateAppointmentSlotSuccessfully() {
+        Appointment appointment = new Appointment();
+        appointment.setId(1L);
+        appointment.setUserId("user-123");
+        appointment.setStatus(AppointmentStatus.PENDING);
+        appointment.setSlot(availableSlot);
+        availableSlot.setStatus(SlotStatus.BOOKED);
+
+        AppointmentSlot newSlot = new AppointmentSlot(branch, LocalDate.of(2026, 6, 16),
+                LocalTime.of(10, 0), LocalTime.of(10, 30));
+        newSlot.setId(2L);
+        newSlot.setStatus(SlotStatus.AVAILABLE);
+
+        UpdateAppointmentRequest request = new UpdateAppointmentRequest();
+        request.setSlotId(2L);
+        request.setCustomerName("Updated Name");
+
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+        when(slotRepository.findById(2L)).thenReturn(Optional.of(newSlot));
+        when(slotRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(appointmentRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Appointment updated = appointmentService.updateAppointment(1L, request, "user-123");
+
+        assertThat(updated.getSlot().getId()).isEqualTo(2L);
+        assertThat(updated.getCustomerName()).isEqualTo("Updated Name");
+        assertThat(availableSlot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+        assertThat(newSlot.getStatus()).isEqualTo(SlotStatus.BOOKED);
+        verify(slotRepository).save(availableSlot);
+        verify(slotRepository).save(newSlot);
+    }
+
+    @Test
+    void shouldThrowWhenUpdatingAppointmentWithUnavailableSlot() {
+        Appointment appointment = new Appointment();
+        appointment.setId(1L);
+        appointment.setUserId("user-123");
+        appointment.setStatus(AppointmentStatus.PENDING);
+        appointment.setSlot(availableSlot);
+
+        AppointmentSlot busySlot = new AppointmentSlot(branch, LocalDate.of(2026, 6, 16),
+                LocalTime.of(10, 0), LocalTime.of(10, 30));
+        busySlot.setId(2L);
+        busySlot.setStatus(SlotStatus.BOOKED);
+
+        UpdateAppointmentRequest request = new UpdateAppointmentRequest();
+        request.setSlotId(2L);
+
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+        when(slotRepository.findById(2L)).thenReturn(Optional.of(busySlot));
+
+        assertThatThrownBy(() -> appointmentService.updateAppointment(1L, request, "user-123"))
+                .isInstanceOf(SlotNotAvailableException.class)
+                .hasMessageContaining("not available");
+    }
+
+    @Test
+    void shouldRejectUpdateByNonOwner() {
+        Appointment appointment = new Appointment();
+        appointment.setId(1L);
+        appointment.setUserId("user-123");
+        appointment.setStatus(AppointmentStatus.PENDING);
+
+        UpdateAppointmentRequest request = new UpdateAppointmentRequest();
+
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+
+        assertThatThrownBy(() -> appointmentService.updateAppointment(1L, request, "other-user"))
+                .isInstanceOf(InvalidOperationException.class)
+                .hasMessageContaining("permission");
+    }
+
+    @Test
+    void shouldRejectUpdateOnCancelledAppointment() {
+        Appointment appointment = new Appointment();
+        appointment.setId(1L);
+        appointment.setUserId("user-123");
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+
+        UpdateAppointmentRequest request = new UpdateAppointmentRequest();
+
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+
+        assertThatThrownBy(() -> appointmentService.updateAppointment(1L, request, "user-123"))
+                .isInstanceOf(InvalidOperationException.class)
+                .hasMessageContaining("cancelled");
     }
 }

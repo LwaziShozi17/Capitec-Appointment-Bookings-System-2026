@@ -22,6 +22,9 @@ class SlotServiceTest {
     @Mock
     private AppointmentSlotRepository slotRepository;
 
+    @Mock
+    private SlotGenerationService slotGenerationService;
+
     @InjectMocks
     private SlotService slotService;
 
@@ -46,9 +49,26 @@ class SlotServiceTest {
     void shouldReturnEmptyListWhenNoSlots() {
         LocalDate date = LocalDate.of(2026, 6, 21);
         when(slotRepository.findByBranchIdAndDate(1L, date)).thenReturn(List.of());
+        when(slotGenerationService.generateSlotsForDate(1L, date)).thenReturn(List.of());
 
         List<AppointmentSlot> results = slotService.getSlotsByBranchAndDate(1L, date);
 
         assertThat(results).isEmpty();
+    }
+
+    @Test
+    void shouldAutoGenerateSlotsWhenNoneExist() {
+        Branch branch = new Branch("Capitec Sandton", "CAP-SDN", "Sandton City");
+        branch.setId(1L);
+        LocalDate date = LocalDate.of(2026, 6, 15);
+
+        AppointmentSlot generatedSlot = new AppointmentSlot(branch, date, LocalTime.of(8, 0), LocalTime.of(8, 30));
+
+        when(slotRepository.findByBranchIdAndDate(1L, date)).thenReturn(List.of());
+        when(slotGenerationService.generateSlotsForDate(1L, date)).thenReturn(List.of(generatedSlot));
+
+        List<AppointmentSlot> results = slotService.getSlotsByBranchAndDate(1L, date);
+
+        assertThat(results).containsExactly(generatedSlot);
     }
 }

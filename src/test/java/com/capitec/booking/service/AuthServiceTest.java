@@ -48,13 +48,14 @@ class AuthServiceTest {
     @Test
     void shouldRegisterNewUser() {
         RegisterRequest request = new RegisterRequest();
-        request.setEmail("newuser@test.com");
-        request.setPassword("password123");
-        request.setFirstName("New");
-        request.setLastName("User");
+        request.setEmail("  NewUser@Test.com  ");
+        request.setPassword("Password123#");
+        request.setFirstName("  New  ");
+        request.setLastName("  User  ");
+        request.setPhoneNumber("  0821234567  ");
 
         when(userRepository.existsByEmail("newuser@test.com")).thenReturn(false);
-        when(passwordEncoder.encode("password123")).thenReturn("$2a$encoded");
+        when(passwordEncoder.encode("Password123#")).thenReturn("$2a$encoded");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User saved = invocation.getArgument(0);
             saved.setId(1L);
