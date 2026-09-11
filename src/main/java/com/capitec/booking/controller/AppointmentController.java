@@ -9,13 +9,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/appointments")
@@ -63,12 +65,14 @@ public class AppointmentController {
 
     @Operation(summary = "Get my appointments", description = "Returns all appointments for the authenticated user")
     @GetMapping("/my")
-    public ResponseEntity<Page<AppointmentResponse>> getMyAppointments(
-            Authentication authentication,
-            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
-        Page<AppointmentResponse> appointments = appointmentService
-                .getUserAppointments(authentication.getName(), pageable)
-                .map(mapper::toResponse);
+    public ResponseEntity<List<AppointmentResponse>> getMyAppointments(
+            Authentication authentication) {
+        List<AppointmentResponse> appointments = appointmentService
+                .getUserAppointments(authentication.getName(),
+                        PageRequest.of(0, 100, Sort.by(Sort.Direction.DESC, "id")))
+                .stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
         return ResponseEntity.ok(appointments);
     }
 }

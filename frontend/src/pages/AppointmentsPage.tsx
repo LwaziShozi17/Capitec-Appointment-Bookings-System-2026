@@ -23,12 +23,13 @@ export default function AppointmentsPage() {
   const toast = useToast();
   const successMessage = (location.state as { message?: string } | null)?.message;
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const loadAppointments = useCallback(() => {
-    api.get<Appointment[]>('/appointments/my').then(({ data }) => {
-      setAppointments(data);
-      setLoading(false);
-    });
-  }, []);
+    api.get<Appointment[]>('/appointments/my')
+      .then(({ data }) => setAppointments(data))
+      .catch(() => toast.error('Failed to load appointments. Please try again.'))
+      .finally(() => setLoading(false));
+  }, []); // toast.error is stable (calls memoized add); empty dep avoids infinite refetch
 
   useEffect(() => {
     if (successMessage) toast.success(successMessage);
