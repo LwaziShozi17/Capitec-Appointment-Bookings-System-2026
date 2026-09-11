@@ -12,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -101,7 +100,7 @@ class AppointmentControllerTest {
         when(appointmentService.getUserAppointments(eq("user@test.com"), any(Pageable.class)))
                 .thenReturn(page);
 
-        ResponseEntity<?> response = controller.getMyAppointments(authentication, PageRequest.of(0, 20));
+        ResponseEntity<?> response = controller.getMyAppointments(authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }

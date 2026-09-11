@@ -78,6 +78,7 @@ export default function BookingPage() {
   useEffect(() => {
     if (!selectedDate || !branchId) return;
     let cancelled = false;
+    setSlots([]);
     setSlotsLoading(true);
     setSlotsError('');
     api
@@ -306,10 +307,10 @@ export default function BookingPage() {
                             ? 'This time has passed'
                             : slot.status === 'BOOKED'
                             ? 'Already booked'
-                            : `${slot.startTime} – ${slot.endTime}`
+                            : `${slot.startTime.slice(0, 5)} – ${slot.endTime.slice(0, 5)}`
                         }
                       >
-                        {slot.startTime}
+                        {slot.startTime.slice(0, 5)}
                         {!available && !blocked && (
                           <span className="block text-[9px] mt-0.5 font-normal">
                             {past ? 'Passed' : 'Booked'}
@@ -399,7 +400,7 @@ export default function BookingPage() {
               <div>
                 <dt className="text-text-low text-xs uppercase tracking-wide">Date & Time</dt>
                 <dd className="font-semibold text-text-high mt-0.5">
-                  {selectedDate} at {slots.find((s) => s.id === selectedSlot)?.startTime}
+                  {selectedDate} at {slots.find((s) => s.id === selectedSlot)?.startTime.slice(0, 5)}
                 </dd>
               </div>
             </dl>

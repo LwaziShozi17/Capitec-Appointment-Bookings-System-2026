@@ -1439,3 +1439,5 @@ INSERT INTO appointments (id, user_id, slot_id, service_type_id, status, custome
 (261, 'demo2@capitec.co.za', 747, 6, 'CONFIRMED', 'Priya Pillay', '0821234002', 'priya.pillay@email.com', 'CAP-261214-261', '2026-12-01 09:00:00');
 
 -- Reset sequences so new rows don't conflict with the seeded IDs
+ALTER TABLE appointment_slots ALTER COLUMN id RESTART WITH 749;
+ALTER TABLE appointments ALTER COLUMN id RESTART WITH 262;

@@ -12,13 +12,21 @@ import java.util.List;
 public class SlotService {
 
     private final AppointmentSlotRepository slotRepository;
+    private final SlotGenerationService slotGenerationService;
 
-    public SlotService(AppointmentSlotRepository slotRepository) {
+    public SlotService(AppointmentSlotRepository slotRepository,
+                       SlotGenerationService slotGenerationService) {
         this.slotRepository = slotRepository;
+        this.slotGenerationService = slotGenerationService;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<AppointmentSlot> getSlotsByBranchAndDate(Long branchId, LocalDate date) {
-        return slotRepository.findByBranchIdAndDate(branchId, date);
+        List<AppointmentSlot> slots = slotRepository.findByBranchIdAndDate(branchId, date);
+        if (slots.isEmpty()) {
+            // Auto-generate slots on first request for this branch/date combination
+            slots = slotGenerationService.generateSlotsForDate(branchId, date);
+        }
+        return slots;
     }
 }
