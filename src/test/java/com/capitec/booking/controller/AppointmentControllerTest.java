@@ -85,6 +85,22 @@ class AppointmentControllerTest {
     }
 
     @Test
+    void shouldReturn201OnSuccessfulBookingByUnauthenticatedClient() {
+        when(appointmentService.bookAppointment(any())).thenReturn(sampleAppointment);
+
+        var request = new com.capitec.booking.dto.request.BookingRequest();
+        request.setSlotId(1L);
+        request.setServiceTypeId(1L);
+        request.setCustomerName("Client User");
+        request.setCustomerEmail("client@example.com");
+
+        ResponseEntity<?> response = controller.bookAppointment(request, null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(request.getUserId()).isEqualTo("client@example.com");
+    }
+
+    @Test
     void shouldReturn200OnCancellation() {
         sampleAppointment.setStatus(AppointmentStatus.CANCELLED);
         when(appointmentService.cancelAppointment(1L, "user@test.com")).thenReturn(sampleAppointment);

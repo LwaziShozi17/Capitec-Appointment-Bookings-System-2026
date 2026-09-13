@@ -57,7 +57,10 @@ public class AppointmentService {
         slotRepository.save(slot);
 
         Appointment appointment = new Appointment();
-        appointment.setUserId(request.getUserId());
+        String userId = request.getUserId() != null && !request.getUserId().isBlank()
+                ? request.getUserId().trim()
+                : (request.getCustomerEmail() != null ? request.getCustomerEmail().trim().toLowerCase() : null);
+        appointment.setUserId(userId);
         appointment.setSlot(slot);
         appointment.setServiceType(serviceType);
         appointment.setCustomerName(request.getCustomerName() != null ? request.getCustomerName().trim() : null);

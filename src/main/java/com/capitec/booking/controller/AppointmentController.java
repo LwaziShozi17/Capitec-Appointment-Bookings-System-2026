@@ -33,14 +33,18 @@ public class AppointmentController {
         this.mapper = mapper;
     }
 
-    @Operation(summary = "Book an appointment", description = "Creates a new appointment for the authenticated user")
+    @Operation(summary = "Book an appointment", description = "Creates a new appointment for the client or authenticated user")
     @ApiResponse(responseCode = "201", description = "Appointment booked successfully")
     @ApiResponse(responseCode = "409", description = "Slot is no longer available")
     @PostMapping
     public ResponseEntity<AppointmentResponse> bookAppointment(
             @Valid @RequestBody BookingRequest request,
             Authentication authentication) {
-        request.setUserId(authentication.getName());
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getName())) {
+            request.setUserId(authentication.getName());
+        } else if (request.getUserId() == null || request.getUserId().isBlank()) {
+            request.setUserId(request.getCustomerEmail() != null ? request.getCustomerEmail().trim().toLowerCase() : null);
+        }
         Appointment appointment = appointmentService.bookAppointment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(appointment));
     }

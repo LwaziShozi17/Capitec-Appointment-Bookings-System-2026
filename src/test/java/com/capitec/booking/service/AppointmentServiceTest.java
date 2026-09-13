@@ -99,6 +99,26 @@ class AppointmentServiceTest {
     }
 
     @Test
+    void shouldBookAppointmentWithFallbackUserIdWhenNull() {
+        bookingRequest.setUserId(null);
+        bookingRequest.setCustomerEmail("client@example.com");
+
+        when(slotRepository.findById(1L)).thenReturn(Optional.of(availableSlot));
+        when(serviceTypeRepository.findById(1L)).thenReturn(Optional.of(serviceType));
+        when(slotRepository.save(any())).thenReturn(availableSlot);
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> {
+            Appointment saved = invocation.getArgument(0);
+            saved.setId(1L);
+            return saved;
+        });
+
+        Appointment result = appointmentService.bookAppointment(bookingRequest);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getUserId()).isEqualTo("client@example.com");
+    }
+
+    @Test
     void shouldPreventDoubleBooking() {
         availableSlot.setStatus(SlotStatus.BOOKED);
         when(slotRepository.findById(1L)).thenReturn(Optional.of(availableSlot));
