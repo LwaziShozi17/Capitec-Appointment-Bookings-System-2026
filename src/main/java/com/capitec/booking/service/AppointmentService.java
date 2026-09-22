@@ -119,12 +119,6 @@ public class AppointmentService {
         return performUpdate(appointment, request);
     }
 
-    @Transactional
-    public Appointment updateAppointmentAsAdmin(Long appointmentId, UpdateAppointmentRequest request) {
-        Appointment appointment = getAppointment(appointmentId);
-        return performUpdate(appointment, request);
-    }
-
     private Appointment performUpdate(Appointment appointment, UpdateAppointmentRequest request) {
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
             throw new InvalidOperationException("Cannot update a cancelled appointment");

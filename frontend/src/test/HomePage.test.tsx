@@ -1,15 +1,31 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { AuthProvider } from '../context/AuthContext';
+import { AuthProvider, AuthContext } from '../context/AuthContext';
 import HomePage from '../pages/HomePage';
 
-function renderHome() {
+function renderHome(loggedIn = false) {
+  const Wrapper = loggedIn
+    ? ({ children }: { children: React.ReactNode }) => (
+        <AuthContext.Provider
+          value={{
+            user: { email: 'u', name: 'U', role: 'USER', token: 't' },
+            login: async () => {},
+            register: async () => {},
+            logout: () => {},
+            isAdmin: false,
+          }}
+        >
+          {children}
+        </AuthContext.Provider>
+      )
+    : AuthProvider;
+
   return render(
     <MemoryRouter>
-      <AuthProvider>
+      <Wrapper>
         <HomePage />
-      </AuthProvider>
+      </Wrapper>
     </MemoryRouter>
   );
 }
@@ -26,8 +42,7 @@ describe('HomePage', () => {
   });
 
   it('shows book and my appointments buttons when logged in', () => {
-    localStorage.setItem('user_profile', JSON.stringify({ email: 'u', name: 'U', role: 'USER' }));
-    renderHome();
+    renderHome(true);
     expect(screen.getByText('Book Appointment')).toBeInTheDocument();
     expect(screen.getByText('My Appointments')).toBeInTheDocument();
   });

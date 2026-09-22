@@ -32,18 +32,16 @@ const PROFILE_KEY = 'user_profile';
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      const stored = localStorage.getItem(PROFILE_KEY);
-      if (!stored) return null;
-      const profile: StoredProfile = JSON.parse(stored);
-      // Token not available on page load — user will see logged-in UI but
-      // any API call will redirect to /login?reason=expired if token absent.
-      return { ...profile, token: '' };
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState<User | null>(null);
+
+  // The JWT is kept in memory only and is never persisted, so it cannot
+  // survive a page reload. A stored profile without a matching token would
+  // make the UI look logged in while every API call (including booking and
+  // "My Appointments") is actually sent unauthenticated, silently breaking
+  // both flows. Clear any stale profile on load and require a real re-login.
+  useEffect(() => {
+    localStorage.removeItem(PROFILE_KEY);
+  }, []);
 
   useEffect(() => {
     if (user && user.token) {

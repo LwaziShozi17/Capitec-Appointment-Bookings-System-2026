@@ -66,10 +66,17 @@ describe('AuthContext', () => {
   });
 
   it('logs out and clears storage', async () => {
-    localStorage.setItem('user_profile', JSON.stringify({ email: 'x', name: 'X', role: 'USER' }));
+    vi.mocked(api.post).mockResolvedValueOnce({
+      data: { token: 'jwt', email: 'x', name: 'X', role: 'USER' },
+    });
 
     render(<AuthProvider><TestComponent /></AuthProvider>);
-    expect(screen.getByTestId('user')).toHaveTextContent('X');
+    await act(async () => {
+      await userEvent.click(screen.getByText('Login'));
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent('X');
+    });
 
     await act(async () => {
       await userEvent.click(screen.getByText('Logout'));
@@ -79,11 +86,15 @@ describe('AuthContext', () => {
     expect(localStorage.getItem('user_profile')).toBeNull();
   });
 
-  it('identifies admin user', () => {
+  it('does not restore a logged-in session from a stale profile without a token', () => {
+    // The JWT lives in memory only and is lost on reload, so a leftover
+    // profile in localStorage must not resurrect a "logged in" UI state.
     localStorage.setItem('user_profile', JSON.stringify({ email: 'a', name: 'Admin', role: 'ADMIN' }));
 
     render(<AuthProvider><TestComponent /></AuthProvider>);
-    expect(screen.getByTestId('admin')).toHaveTextContent('yes');
+    expect(screen.getByTestId('user')).toHaveTextContent('none');
+    expect(screen.getByTestId('admin')).toHaveTextContent('no');
+    expect(localStorage.getItem('user_profile')).toBeNull();
   });
 
   it('throws if useAuth used outside provider', () => {

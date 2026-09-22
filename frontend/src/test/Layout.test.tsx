@@ -2,8 +2,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { AuthProvider } from '../context/AuthContext';
+import { AuthProvider, AuthContext } from '../context/AuthContext';
 import Layout from '../components/Layout';
+import type { User } from '../types';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -11,15 +12,36 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-function renderLayout(userState?: object) {
+// The JWT lives in memory only, so an authenticated session cannot be faked
+// by seeding localStorage before render. Logged-in cases instead supply an
+// AuthContext value directly, as they would exist right after a real login.
+function renderLayout(userState?: User) {
   if (userState) {
-    localStorage.setItem('user_profile', JSON.stringify(userState));
+    localStorage.setItem('user_profile', JSON.stringify({ email: userState.email, name: userState.name, role: userState.role }));
   }
+  const Wrapper = userState
+    ? ({ children }: { children: React.ReactNode }) => (
+        <AuthContext.Provider
+          value={{
+            user: userState,
+            login: async () => {},
+            register: async () => {},
+            logout: () => {
+              localStorage.removeItem('user_profile');
+            },
+            isAdmin: userState.role === 'ADMIN',
+          }}
+        >
+          {children}
+        </AuthContext.Provider>
+      )
+    : AuthProvider;
+
   return render(
     <MemoryRouter>
-      <AuthProvider>
+      <Wrapper>
         <Layout />
-      </AuthProvider>
+      </Wrapper>
     </MemoryRouter>
   );
 }

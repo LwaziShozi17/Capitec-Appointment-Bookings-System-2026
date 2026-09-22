@@ -1,13 +1,25 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from '../context/AuthContext';
+import { AuthProvider, AuthContext } from '../context/AuthContext';
 import ProtectedRoute from '../components/ProtectedRoute';
+import type { User } from '../types';
 
-function renderWithRoute(adminOnly = false) {
+// The JWT lives in memory only, so an authenticated session cannot be faked
+// by seeding localStorage before render. Pre-authenticated cases instead
+// supply an AuthContext value directly, as they would after a real login.
+function renderWithRoute(adminOnly = false, user: User | null = null) {
+  const Wrapper = user
+    ? ({ children }: { children: React.ReactNode }) => (
+        <AuthContext.Provider value={{ user, login: async () => {}, register: async () => {}, logout: () => {}, isAdmin: user.role === 'ADMIN' }}>
+          {children}
+        </AuthContext.Provider>
+      )
+    : AuthProvider;
+
   return render(
     <MemoryRouter initialEntries={['/protected']}>
-      <AuthProvider>
+      <Wrapper>
         <Routes>
           <Route path="/login" element={<div>Login Page</div>} />
           <Route path="/" element={<div>Home</div>} />
@@ -20,7 +32,7 @@ function renderWithRoute(adminOnly = false) {
             }
           />
         </Routes>
-      </AuthProvider>
+      </Wrapper>
     </MemoryRouter>
   );
 }
@@ -37,21 +49,18 @@ describe('ProtectedRoute', () => {
   });
 
   it('shows content when authenticated', () => {
-    localStorage.setItem('user_profile', JSON.stringify({ email: 'u', name: 'U', role: 'USER' }));
-    renderWithRoute();
+    renderWithRoute(false, { email: 'u', name: 'U', role: 'USER', token: 't' });
     expect(screen.getByText('Protected Content')).toBeInTheDocument();
   });
 
   it('redirects non-admin from admin route', () => {
-    localStorage.setItem('user_profile', JSON.stringify({ email: 'u', name: 'U', role: 'USER' }));
-    renderWithRoute(true);
+    renderWithRoute(true, { email: 'u', name: 'U', role: 'USER', token: 't' });
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
   });
 
   it('allows admin to access admin route', () => {
-    localStorage.setItem('user_profile', JSON.stringify({ email: 'a', name: 'A', role: 'ADMIN' }));
-    renderWithRoute(true);
+    renderWithRoute(true, { email: 'a', name: 'A', role: 'ADMIN', token: 't' });
     expect(screen.getByText('Protected Content')).toBeInTheDocument();
   });
 });

@@ -160,6 +160,8 @@ describe('BookingPage', () => {
 
     const nameInput = screen.getAllByRole('textbox')[0];
     await userEvent.type(nameInput, 'Test User');
+    const emailInput = screen.getAllByRole('textbox')[1];
+    await userEvent.type(emailInput, 'user@test.com');
 
     await userEvent.click(screen.getByRole('button', { name: /confirm booking/i }));
 
@@ -191,6 +193,8 @@ describe('BookingPage', () => {
 
     const nameInput = screen.getAllByRole('textbox')[0];
     await userEvent.type(nameInput, 'Test User');
+    const emailInput = screen.getAllByRole('textbox')[1];
+    await userEvent.type(emailInput, 'user@test.com');
 
     await userEvent.click(screen.getByRole('button', { name: /confirm booking/i }));
 
@@ -222,6 +226,8 @@ describe('BookingPage', () => {
 
     const nameInput = screen.getAllByRole('textbox')[0];
     await userEvent.type(nameInput, 'Test User');
+    const emailInput = screen.getAllByRole('textbox')[1];
+    await userEvent.type(emailInput, 'user@test.com');
 
     await userEvent.click(screen.getByRole('button', { name: /confirm booking/i }));
 
