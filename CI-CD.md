@@ -103,8 +103,8 @@ Go to **Repository → Settings → Secrets and variables → Actions** and conf
 
 | Variable name | Example value | Description |
 |---------------|--------------|-------------|
-| `STAGING_URL` | `https://staging.capitec-booking.example.com` | Base URL used for smoke tests and environment link |
-| `STAGING_CORS_ORIGINS` | `https://staging.capitec-booking.example.com` | CORS allowed origins injected into the Spring app |
+| `STAGING_URL` | `https://staging.capitec-booking.  example.com` | Base URL used for smoke tests and environment link |
+| `STAGING_CORS_ORIGINS` | `https://staging.capitec?≥-booking.example.com` | CORS allowed origins injected into the Spring app |
 | `PRODUCTION_URL` | `https://booking.capitec.co.za` | Base URL used for smoke tests and environment link |
 | `PROD_CORS_ORIGINS` | `https://booking.capitec.co.za` | CORS allowed origins for production |
 

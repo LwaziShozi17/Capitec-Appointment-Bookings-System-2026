@@ -35,6 +35,10 @@ public class User {
 
     private LocalDateTime accountLockedUntil;
 
+    private String passwordResetToken;
+
+    private LocalDateTime passwordResetTokenExpiry;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -86,6 +90,12 @@ public class User {
     public boolean isAccountLocked() {
         return accountLockedUntil != null && LocalDateTime.now().isBefore(accountLockedUntil);
     }
+
+    public String getPasswordResetToken() { return passwordResetToken; }
+    public void setPasswordResetToken(String passwordResetToken) { this.passwordResetToken = passwordResetToken; }
+
+    public LocalDateTime getPasswordResetTokenExpiry() { return passwordResetTokenExpiry; }
+    public void setPasswordResetTokenExpiry(LocalDateTime passwordResetTokenExpiry) { this.passwordResetTokenExpiry = passwordResetTokenExpiry; }
 
     public String getFullName() { return firstName + " " + lastName; }
 }

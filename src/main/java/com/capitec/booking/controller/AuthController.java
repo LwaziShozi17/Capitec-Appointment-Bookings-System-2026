@@ -1,7 +1,9 @@
 package com.capitec.booking.controller;
 
+import com.capitec.booking.dto.request.ForgotPasswordRequest;
 import com.capitec.booking.dto.request.LoginRequest;
 import com.capitec.booking.dto.request.RegisterRequest;
+import com.capitec.booking.dto.request.ResetPasswordRequest;
 import com.capitec.booking.dto.response.AuthResponse;
 import com.capitec.booking.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,6 +13,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -39,7 +43,22 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(response);
+    }
 
+    @Operation(summary = "Request password reset", description = "Generates a password reset token for the given email")
+    @ApiResponse(responseCode = "200", description = "Reset instructions sent (if email exists)")
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        String message = authService.forgotPassword(request);
+        return ResponseEntity.ok(Map.of("message", message));
+    }
 
+    @Operation(summary = "Reset password", description = "Resets the user's password using a valid reset token")
+    @ApiResponse(responseCode = "200", description = "Password reset successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid or expired token")
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(Map.of("message", "Password has been reset successfully."));
     }
 }

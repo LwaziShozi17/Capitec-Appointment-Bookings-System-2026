@@ -14,7 +14,7 @@ A full-stack appointment booking system that lets Capitec Bank customers schedul
 
 ```bash
 git clone https://github.com/LwaziShozi17/Capitec-Appointment-Bookings-System-2027.git
-cd Capitec-Appointment-Bookings-System-2027
+cd Capitec-Appointment-Bookings-System-2026
 ```
 
 ### Step 2 — Generate the environment file

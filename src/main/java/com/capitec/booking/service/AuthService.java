@@ -2,8 +2,10 @@ package com.capitec.booking.service;
 
 import com.capitec.booking.domain.enums.Role;
 import com.capitec.booking.domain.model.User;
+import com.capitec.booking.dto.request.ForgotPasswordRequest;
 import com.capitec.booking.dto.request.LoginRequest;
 import com.capitec.booking.dto.request.RegisterRequest;
+import com.capitec.booking.dto.request.ResetPasswordRequest;
 import com.capitec.booking.dto.response.AuthResponse;
 import com.capitec.booking.exception.InvalidOperationException;
 import com.capitec.booking.repository.UserRepository;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -110,5 +113,42 @@ public class AuthService {
             user.setAccountLockedUntil(null);
             userRepository.save(user);
         }
+    }
+
+    @Transactional
+    public String forgotPassword(ForgotPasswordRequest request) {
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        log.info("Password reset requested for email={}", email);
+
+        // Always return the same message to prevent email enumeration
+        userRepository.findByEmail(email).ifPresent(user -> {
+            String token = UUID.randomUUID().toString();
+            user.setPasswordResetToken(token);
+            user.setPasswordResetTokenExpiry(LocalDateTime.now().plusHours(1));
+            userRepository.save(user);
+            // In production this token would be emailed; log it for dev use
+            log.info("Password reset token for email={}: {}", email, token);
+        });
+
+        return "If that email is registered, a password reset link has been sent.";
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        String token = request.getToken() != null ? request.getToken().trim() : "";
+        User user = userRepository.findByPasswordResetToken(token)
+                .orElseThrow(() -> new InvalidOperationException("Invalid or expired reset token"));
+
+        if (user.getPasswordResetTokenExpiry() == null || LocalDateTime.now().isAfter(user.getPasswordResetTokenExpiry())) {
+            throw new InvalidOperationException("Invalid or expired reset token");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setPasswordResetToken(null);
+        user.setPasswordResetTokenExpiry(null);
+        user.setFailedLoginAttempts(0);
+        user.setAccountLockedUntil(null);
+        userRepository.save(user);
+        log.info("Password reset successful for email={}", user.getEmail());
     }
 }
